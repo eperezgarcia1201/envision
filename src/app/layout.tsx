@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Lora, Manrope } from "next/font/google";
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./globals.css";
 import { SiteHeader } from "@/components/layout/site-header";
 import { SiteFooter } from "@/components/layout/site-footer";
