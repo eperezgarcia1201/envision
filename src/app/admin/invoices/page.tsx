@@ -48,12 +48,12 @@ export default async function AdminInvoicesPage() {
       extraActions={[
         {
           label: "PDF",
-          href: (item) => `/api/invoices/${item.id}/pdf`,
+          hrefTemplate: "/api/invoices/{id}/pdf",
           openInNewTab: true,
         },
         {
           label: "Apply Payment",
-          href: (item) => `/api/invoices/${item.id}/payment`,
+          hrefTemplate: "/api/invoices/{id}/payment",
           openInNewTab: true,
         },
       ]}

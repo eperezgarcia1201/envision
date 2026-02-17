@@ -47,7 +47,7 @@ export type ResourceFilter = {
 
 export type ResourceAction = {
   label: string;
-  href: (item: Record<string, unknown>) => string;
+  hrefTemplate: string;
   openInNewTab?: boolean;
 };
 
@@ -144,6 +144,13 @@ function parseFieldValue(field: ResourceField, rawValue: string) {
   }
 
   return trimmed;
+}
+
+function buildActionHref(action: ResourceAction, item: Record<string, unknown>) {
+  return action.hrefTemplate.replace(/\{([^}]+)\}/g, (_, key: string) => {
+    const value = resolvePath(item, key);
+    return encodeURIComponent(String(value ?? ""));
+  });
 }
 
 function formatColumnValue(item: Record<string, unknown>, column: ResourceColumn) {
@@ -569,7 +576,7 @@ export function ResourceCrud({
                           <a
                             key={`${id}-${action.label}`}
                             className="btn btn-outline"
-                            href={action.href(item)}
+                            href={buildActionHref(action, item)}
                             target={action.openInNewTab ? "_blank" : undefined}
                             rel={action.openInNewTab ? "noreferrer" : undefined}
                           >

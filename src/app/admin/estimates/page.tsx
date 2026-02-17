@@ -59,12 +59,12 @@ export default async function AdminEstimatesPage() {
       extraActions={[
         {
           label: "PDF",
-          href: (item) => `/api/estimates/${item.id}/pdf`,
+          hrefTemplate: "/api/estimates/{id}/pdf",
           openInNewTab: true,
         },
         {
           label: "Convert",
-          href: (item) => `/api/estimates/${item.id}/convert`,
+          hrefTemplate: "/api/estimates/{id}/convert",
           openInNewTab: true,
         },
       ]}
