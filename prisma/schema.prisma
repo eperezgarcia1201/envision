@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  CLIENT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  WON
+  LOST
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum WorkOrderStatus {
+  BACKLOG
+  SCHEDULED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PARTIAL
+  PAID
+  OVERDUE
+  VOID
+}
+
+model User {
+  id           String    @id @default(cuid())
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  username     String    @unique
+  passwordHash String
+  role         UserRole  @default(CLIENT)
+  fullName     String?
+  clientId     String?
+  client       Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  sessions     Session[]
+
+  @@index([role])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  tokenHash String   @unique
+  expiresAt DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([userId])
+}
+
+model Lead {
+  id            String     @id @default(cuid())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  name          String
+  email         String
+  phone         String?
+  company       String?
+  serviceNeeded String?
+  message       String
+  source        String     @default("website")
+  status        LeadStatus @default(NEW)
+
+  @@index([createdAt])
+  @@index([status])
+}
+
+model Client {
+  id           String      @id @default(cuid())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  companyName  String
+  contactName  String
+  email        String
+  phone        String
+  tier         String
+  properties   Property[]
+  workOrders   WorkOrder[]
+  invoices     Invoice[]
+  users        User[]
+
+  @@index([companyName])
+}
+
+model Property {
+  id           String      @id @default(cuid())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  name         String
+  addressLine1 String
+  city         String
+  state        String
+  zipCode      String
+  managerName  String
+  managerEmail String
+  managerPhone String
+  clientId     String?
+  client       Client?     @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  workOrders   WorkOrder[]
+
+  @@index([city, state])
+}
+
+model WorkOrder {
+  id             String          @id @default(cuid())
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  code           String          @unique
+  title          String
+  description    String
+  status         WorkOrderStatus @default(BACKLOG)
+  priority       Priority        @default(MEDIUM)
+  assignee       String?
+  estimatedHours Int?
+  actualHours    Int?
+  scheduledFor   DateTime?
+  completedAt    DateTime?
+  clientId       String?
+  client         Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  propertyId     String?
+  property       Property?       @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  invoices       Invoice[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([scheduledFor])
+}
+
+model Invoice {
+  id            String        @id @default(cuid())
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  invoiceNumber String        @unique
+  amountCents   Int
+  status        InvoiceStatus @default(DRAFT)
+  issuedAt      DateTime      @default(now())
+  dueDate       DateTime
+  paidAt        DateTime?
+  clientId      String
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  workOrderId   String?
+  workOrder     WorkOrder?    @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+model GalleryAsset {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  title      String
+  caption    String
+  category   String
+  imageUrl   String
+  featured   Boolean  @default(false)
+  capturedAt DateTime @default(now())
+  location   String
+
+  @@index([category])
+  @@index([featured])
+}
+
+model ServicePackage {
+  id               String   @id @default(cuid())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  slug             String   @unique
+  name             String
+  summary          String
+  responseSlaHours Int
+  coverageArea     String
+  startingPrice    String
+  featured         Boolean  @default(false)
+
+  @@index([featured])
+}
