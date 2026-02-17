@@ -34,6 +34,11 @@ export function SiteHeaderClient({ user }: SiteHeaderClientProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
+  const isAdminRoute = pathname.startsWith("/admin");
+
+  if (isAdminRoute) {
+    return null;
+  }
 
   const role = user?.role;
   const isAdminLike = role === "ADMIN" || role === "MANAGER";
