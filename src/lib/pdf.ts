@@ -1,4 +1,4 @@
-import PDFDocument from "pdfkit";
+import PDFDocument from "pdfkit/js/pdfkit.standalone.js";
 
 export async function renderPdfBuffer(render: (doc: PDFKit.PDFDocument) => void) {
   return new Promise<Buffer>((resolve, reject) => {
