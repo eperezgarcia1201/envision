@@ -1034,10 +1034,18 @@ textarea:focus {
     radial-gradient(circle at 12% 18%, rgba(232, 190, 116, 0.24), transparent 38%);
   color: #eef4ff;
   box-shadow: 0 14px 30px rgba(8, 22, 54, 0.32);
-  display: grid;
-  grid-template-rows: 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
   max-height: calc(100vh - 155px);
+  overflow: hidden;
+}
+
+.crm-sidebar nav {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.1rem;
 }
 
 .crm-side-list {
@@ -1046,8 +1054,6 @@ textarea:focus {
   padding: 0;
   display: grid;
   gap: 0.32rem;
-  overflow: auto;
-  padding-right: 0.1rem;
 }
 
 .crm-side-link {
@@ -1513,8 +1519,13 @@ textarea:focus {
   }
 
   .crm-sidebar {
-    grid-template-rows: auto auto;
     max-height: none;
+    overflow: visible;
+  }
+
+  .crm-sidebar nav {
+    overflow: visible;
+    padding-right: 0;
   }
 
   .crm-form-grid {
