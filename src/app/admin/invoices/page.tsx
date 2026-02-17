@@ -45,6 +45,13 @@ export default async function AdminInvoicesPage() {
       searchKeys={["invoiceNumber", "client.companyName", "workOrder.code", "notes"]}
       filters={[{ name: "status", label: "Status", options: statusOptions }]}
       defaultValues={{ status: "DRAFT" }}
+      extraActions={[
+        {
+          label: "PDF",
+          href: (item) => `/api/invoices/${item.id}/pdf`,
+          openInNewTab: true,
+        },
+      ]}
       columns={[
         { key: "invoiceNumber", label: "Invoice #" },
         { key: "client.companyName", label: "Client" },

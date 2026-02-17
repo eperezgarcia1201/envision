@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminNavigation } from "@/lib/admin-navigation";
+import { CompanyLogo } from "@/components/branding/company-logo";
 import { LogoutButton } from "@/components/forms/logout-button";
 
 type AdminShellProps = {
@@ -30,10 +31,7 @@ export function AdminShell({ user, children }: AdminShellProps) {
       <header className="crm-topbar">
         <div className="crm-brand-row">
           <Link href="/admin" className="crm-brand" aria-label="CRM Dashboard Home">
-            <span className="crm-brand-mark">EM</span>
-            <span>
-              ENVISION <strong>Maintenence</strong>
-            </span>
+            <CompanyLogo size={30} variant="light" withWordmark={true} />
           </Link>
 
           <nav className="crm-topnav" aria-label="CRM Top Navigation">

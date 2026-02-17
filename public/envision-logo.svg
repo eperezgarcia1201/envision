@@ -1,0 +1,12 @@
+<svg width="220" height="48" viewBox="0 0 220 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="em-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F2D8AA"/>
+      <stop offset="100%" stop-color="#D4A55F"/>
+    </linearGradient>
+  </defs>
+  <circle cx="24" cy="24" r="20" fill="url(#em-bg)" stroke="#D6AC63"/>
+  <path d="M14 29V16h3.3l2.2 4 2.2-4h3.2v13h-2.6v-7.4l-2.1 3.7h-1.2l-2.1-3.7V29H14z" fill="#132B59"/>
+  <path d="M27.3 16h4.3c1.7 0 3.1 1.3 3.1 3.1 0 1.2-.7 2.3-1.8 2.8l2.4 7.1H32l-1.9-4h-.8v4h-2.7V16zm2.7 2.4v2.1h1.3c.6 0 1.1-.5 1.1-1s-.5-1-1.1-1H30z" fill="#132B59"/>
+  <text x="54" y="29" fill="#0F2658" font-family="Manrope, Arial, sans-serif" font-size="22" font-weight="700">Envision <tspan fill="#D6AC63">Maintenence</tspan></text>
+</svg>

@@ -96,6 +96,8 @@ export async function getCrmDashboardData() {
     clients,
     paidByClient,
     openWorkOrdersCount,
+    workOrderStatusGroups,
+    invoiceStatusGroups,
   ] = await Promise.all([
     prisma.lead.findMany({
       select: {
@@ -190,6 +192,18 @@ export async function getCrmDashboardData() {
         },
       },
     }),
+    prisma.workOrder.groupBy({
+      by: ["status"],
+      _count: {
+        id: true,
+      },
+    }),
+    prisma.invoice.groupBy({
+      by: ["status"],
+      _count: {
+        id: true,
+      },
+    }),
   ]);
 
   const leadPipeline = Object.values(LeadStatus).map((status) => ({
@@ -221,6 +235,14 @@ export async function getCrmDashboardData() {
     .slice(0, 5);
 
   const revenueSeries = buildRevenueSeries(paidInvoices);
+  const workOrderStatusBreakdown = Object.values(WorkOrderStatus).map((status) => ({
+    status,
+    count: workOrderStatusGroups.find((item) => item.status === status)?._count.id ?? 0,
+  }));
+  const invoiceStatusBreakdown = Object.values(InvoiceStatus).map((status) => ({
+    status,
+    count: invoiceStatusGroups.find((item) => item.status === status)?._count.id ?? 0,
+  }));
 
   return {
     metrics: {
@@ -234,6 +256,8 @@ export async function getCrmDashboardData() {
     },
     leadPipeline,
     revenueSeries,
+    workOrderStatusBreakdown,
+    invoiceStatusBreakdown,
     workOrders,
     scheduleToday,
     activity,

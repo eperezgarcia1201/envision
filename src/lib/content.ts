@@ -192,6 +192,16 @@ export const apiEndpointsPreview = [
     path: "/api/service-packages",
     description: "Read and manage service package catalog entries.",
   },
+  {
+    method: "GET",
+    path: "/api/invoices/:id/pdf",
+    description: "Generate downloadable invoice PDF for billing and accounting workflows.",
+  },
+  {
+    method: "GET",
+    path: "/api/estimates/:id/pdf",
+    description: "Generate downloadable quote/estimate PDF for client approvals.",
+  },
 ];
 
 export const roadmapMilestones = [

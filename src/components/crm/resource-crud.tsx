@@ -45,6 +45,12 @@ export type ResourceFilter = {
   options: ResourceOption[];
 };
 
+export type ResourceAction = {
+  label: string;
+  href: (item: Record<string, unknown>) => string;
+  openInNewTab?: boolean;
+};
+
 type ResourceCrudProps = {
   title: string;
   description: string;
@@ -57,6 +63,7 @@ type ResourceCrudProps = {
   filters?: ResourceFilter[];
   defaultValues?: Record<string, string>;
   allowDelete?: boolean;
+  extraActions?: ResourceAction[];
 };
 
 function resolvePath(data: Record<string, unknown>, path: string): unknown {
@@ -177,6 +184,7 @@ export function ResourceCrud({
   filters = [],
   defaultValues,
   allowDelete = true,
+  extraActions = [],
 }: ResourceCrudProps) {
   const [items, setItems] = useState(initialItems);
   const [searchTerm, setSearchTerm] = useState("");
@@ -557,6 +565,17 @@ export function ResourceCrud({
                     })}
                     <td>
                       <div className="crm-table-actions">
+                        {extraActions.map((action) => (
+                          <a
+                            key={`${id}-${action.label}`}
+                            className="btn btn-outline"
+                            href={action.href(item)}
+                            target={action.openInNewTab ? "_blank" : undefined}
+                            rel={action.openInNewTab ? "noreferrer" : undefined}
+                          >
+                            {action.label}
+                          </a>
+                        ))}
                         <button type="button" className="btn btn-outline" onClick={() => startEdit(item)}>
                           Edit
                         </button>

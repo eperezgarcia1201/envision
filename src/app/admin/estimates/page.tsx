@@ -56,6 +56,13 @@ export default async function AdminEstimatesPage() {
       searchKeys={["estimateNumber", "title", "description", "client.companyName", "lead.name", "preparedBy"]}
       filters={[{ name: "status", label: "Status", options: statusOptions }]}
       defaultValues={{ status: "DRAFT" }}
+      extraActions={[
+        {
+          label: "PDF",
+          href: (item) => `/api/estimates/${item.id}/pdf`,
+          openInNewTab: true,
+        },
+      ]}
       columns={[
         { key: "estimateNumber", label: "Estimate #" },
         { key: "title", label: "Title" },

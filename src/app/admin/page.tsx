@@ -1,23 +1,15 @@
 import type { Metadata } from "next";
 import { formatCurrencyFromCents, formatDate, formatTime } from "@/lib/format";
 import { enumLabel, getCrmDashboardData, severityClassName } from "@/lib/crm";
+import { DashboardCharts } from "@/components/crm/dashboard-charts";
 
 export const metadata: Metadata = {
   title: "CRM Dashboard",
   description: "Operations command center for Envision Maintenence.",
 };
 
-function revenueBarHeight(amountCents: number, max: number) {
-  if (max <= 0) {
-    return 12;
-  }
-
-  return Math.max(12, Math.round((amountCents / max) * 100));
-}
-
 export default async function AdminDashboardPage() {
   const data = await getCrmDashboardData();
-  const maxRevenue = Math.max(...data.revenueSeries.map((point) => point.amountCents), 1);
 
   return (
     <div className="crm-stack">
@@ -51,23 +43,15 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
 
+      <DashboardCharts
+        revenueSeries={data.revenueSeries}
+        leadPipeline={data.leadPipeline}
+        workOrderStatusBreakdown={data.workOrderStatusBreakdown}
+        invoiceStatusBreakdown={data.invoiceStatusBreakdown}
+      />
+
       <section className="crm-main-columns">
         <div className="crm-stack">
-          <article className="crm-panel">
-            <div className="crm-section-head compact">
-              <h2>Lead Pipeline</h2>
-              <p>Current conversion stages</p>
-            </div>
-            <div className="crm-pipeline-row">
-              {data.leadPipeline.map((item) => (
-                <div key={item.status} className="crm-pipeline-pill">
-                  <span>{enumLabel(item.status)}</span>
-                  <strong>{item.count}</strong>
-                </div>
-              ))}
-            </div>
-          </article>
-
           <article className="crm-panel">
             <div className="crm-section-head compact">
               <h2>Work Orders</h2>
@@ -126,25 +110,6 @@ export default async function AdminDashboardPage() {
         </div>
 
         <div className="crm-stack">
-          <article className="crm-panel">
-            <div className="crm-section-head compact">
-              <h2>Revenue (6 Months)</h2>
-              <p>Paid invoice trend</p>
-            </div>
-            <div className="crm-revenue-chart">
-              {data.revenueSeries.map((point) => (
-                <div key={point.label} className="crm-revenue-col">
-                  <div
-                    className="crm-revenue-bar"
-                    style={{ height: `${revenueBarHeight(point.amountCents, maxRevenue)}%` }}
-                    title={`${point.label}: ${formatCurrencyFromCents(point.amountCents)}`}
-                  />
-                  <span>{point.label}</span>
-                </div>
-              ))}
-            </div>
-          </article>
-
           <article className="crm-panel">
             <div className="crm-section-head compact">
               <h2>Schedule</h2>

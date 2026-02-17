@@ -16,12 +16,15 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
+    "@types/pdfkit": "^0.17.5",
     "bcryptjs": "^3.0.3",
     "bootstrap": "^5.3.8",
     "next": "16.1.6",
+    "pdfkit": "^0.17.2",
     "prisma": "^6.19.2",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "recharts": "^3.7.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

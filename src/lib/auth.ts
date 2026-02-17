@@ -74,6 +74,7 @@ export async function getUserFromSessionToken(token: string | null | undefined) 
           username: true,
           role: true,
           fullName: true,
+          clientId: true,
         },
       },
     },
