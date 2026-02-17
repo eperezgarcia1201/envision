@@ -83,6 +83,30 @@ export default async function AdminReportsPage() {
           ))}
         </div>
       </section>
+
+      <section className="crm-panel">
+        <div className="crm-section-head compact">
+          <h2>Exports</h2>
+          <p>Download CSV snapshots for operational and finance workflows.</p>
+        </div>
+        <div className="crm-pipeline-row" style={{ marginTop: "0.8rem" }}>
+          <a className="pill" href="/api/reports/export?resource=invoices" target="_blank" rel="noreferrer">
+            Export Invoices CSV
+          </a>
+          <a className="pill" href="/api/reports/export?resource=leads" target="_blank" rel="noreferrer">
+            Export Leads CSV
+          </a>
+          <a className="pill" href="/api/reports/export?resource=work-orders" target="_blank" rel="noreferrer">
+            Export Work Orders CSV
+          </a>
+          <a className="pill" href="/api/reports/export?resource=bookings" target="_blank" rel="noreferrer">
+            Export Bookings CSV
+          </a>
+          <a className="pill" href="/api/reports/export?resource=payments" target="_blank" rel="noreferrer">
+            Export Payments CSV
+          </a>
+        </div>
+      </section>
     </div>
   );
 }

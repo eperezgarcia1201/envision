@@ -84,6 +84,88 @@ enum ActivitySeverity {
   URGENT
 }
 
+enum OnboardingStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+}
+
+enum ContactStatus {
+  ACTIVE
+  INACTIVE
+  DO_NOT_CONTACT
+}
+
+enum BookingStatus {
+  NEW
+  REVIEWED
+  QUOTED
+  WON
+  CLOSED
+}
+
+enum CheckInType {
+  CLOCK_IN
+  CLOCK_OUT
+  ON_MY_WAY
+  ARRIVED
+  COMPLETE
+}
+
+enum ChannelType {
+  EMAIL
+  SMS
+}
+
+enum CampaignStatus {
+  ACTIVE
+  PAUSED
+  DISABLED
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  FAILED
+  CANCELED
+}
+
+enum PaymentStatus {
+  PENDING
+  SETTLED
+  FAILED
+  REFUNDED
+  VOID
+}
+
+enum PayrollStatus {
+  DRAFT
+  APPROVED
+  PROCESSED
+  CANCELED
+}
+
+enum AvailabilityType {
+  AVAILABLE
+  BLOCKED
+  TIME_OFF
+  PTO
+}
+
+enum IntegrationStatus {
+  CONNECTED
+  DISCONNECTED
+  ERROR
+  PENDING
+}
+
+enum ExportStatus {
+  QUEUED
+  COMPLETED
+  FAILED
+}
+
 model User {
   id           String        @id @default(cuid())
   createdAt    DateTime      @default(now())
@@ -114,39 +196,45 @@ model Session {
 }
 
 model Lead {
-  id            String     @id @default(cuid())
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  name          String
-  email         String
-  phone         String?
-  company       String?
-  serviceNeeded String?
-  message       String
-  source        String     @default("website")
-  status        LeadStatus @default(NEW)
-  estimates     Estimate[]
+  id              String           @id @default(cuid())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  name            String
+  email           String
+  phone           String?
+  company         String?
+  serviceNeeded   String?
+  message         String
+  source          String           @default("website")
+  status          LeadStatus       @default(NEW)
+  estimates       Estimate[]
+  bookingRequests BookingRequest[] @relation("BookingConvertedLead")
 
   @@index([createdAt])
   @@index([status])
 }
 
 model Client {
-  id            String         @id @default(cuid())
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  companyName   String
-  contactName   String
-  email         String
-  phone         String
-  tier          String
-  properties    Property[]
-  workOrders    WorkOrder[]
-  invoices      Invoice[]
-  users         User[]
-  estimates     Estimate[]
-  scheduleItems ScheduleItem[]
-  activityLogs  ActivityLog[]
+  id              String           @id @default(cuid())
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  companyName     String
+  contactName     String
+  email           String
+  phone           String
+  tier            String
+  properties      Property[]
+  workOrders      WorkOrder[]
+  invoices        Invoice[]
+  users           User[]
+  estimates       Estimate[]
+  scheduleItems   ScheduleItem[]
+  activityLogs    ActivityLog[]
+  onboardingTasks OnboardingTask[]
+  contacts        ContactPerson[]
+  bookingRequests BookingRequest[]
+  automationRules AutomationRule[]
+  messageLogs     MessageLog[]
 
   @@index([companyName])
 }
@@ -204,20 +292,21 @@ model WorkOrder {
 }
 
 model Invoice {
-  id            String        @id @default(cuid())
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  invoiceNumber String        @unique
+  id            String          @id @default(cuid())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  invoiceNumber String          @unique
   amountCents   Int
-  status        InvoiceStatus @default(DRAFT)
-  issuedAt      DateTime      @default(now())
+  status        InvoiceStatus   @default(DRAFT)
+  issuedAt      DateTime        @default(now())
   dueDate       DateTime
   paidAt        DateTime?
   notes         String?
   clientId      String
-  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  client        Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
   workOrderId   String?
-  workOrder     WorkOrder?    @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  workOrder     WorkOrder?      @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  payments      PaymentRecord[]
 
   @@index([status])
   @@index([dueDate])
@@ -249,18 +338,21 @@ model Estimate {
 }
 
 model Employee {
-  id            String         @id @default(cuid())
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  fullName      String
-  email         String         @unique
-  phone         String
-  role          EmployeeRole
-  status        EmployeeStatus @default(ACTIVE)
-  avatarUrl     String?
-  territory     String?
-  workOrders    WorkOrder[]    @relation("AssignedEmployeeWorkOrders")
-  scheduleItems ScheduleItem[]
+  id                 String              @id @default(cuid())
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  fullName           String
+  email              String              @unique
+  phone              String
+  role               EmployeeRole
+  status             EmployeeStatus      @default(ACTIVE)
+  avatarUrl          String?
+  territory          String?
+  workOrders         WorkOrder[]         @relation("AssignedEmployeeWorkOrders")
+  scheduleItems      ScheduleItem[]
+  checkIns           FieldCheckIn[]
+  payrollEntries     PayrollEntry[]
+  availabilityBlocks AvailabilityBlock[]
 
   @@index([role])
   @@index([status])
@@ -285,6 +377,7 @@ model ScheduleItem {
   client      Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
   propertyId  String?
   property    Property?      @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  checkIns    FieldCheckIn[]
 
   @@index([startAt])
   @@index([status])
@@ -337,4 +430,244 @@ model ServicePackage {
   featured         Boolean  @default(false)
 
   @@index([featured])
+}
+
+model OnboardingTask {
+  id          String           @id @default(cuid())
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  title       String
+  owner       String?
+  status      OnboardingStatus @default(PENDING)
+  dueDate     DateTime?
+  completedAt DateTime?
+  notes       String?
+  clientId    String?
+  client      Client?          @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([dueDate])
+}
+
+model ContactPerson {
+  id        String        @id @default(cuid())
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  fullName  String
+  email     String
+  phone     String?
+  title     String?
+  status    ContactStatus @default(ACTIVE)
+  isPrimary Boolean       @default(false)
+  isBilling Boolean       @default(false)
+  notes     String?
+  clientId  String
+  client    Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model BookingRequest {
+  id              String        @id @default(cuid())
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  name            String
+  email           String
+  phone           String?
+  company         String?
+  address         String?
+  serviceType     String
+  frequency       String?
+  preferredDate   DateTime?
+  source          String        @default("website-booking")
+  status          BookingStatus @default(NEW)
+  notes           String?
+  convertedLeadId String?
+  convertedLead   Lead?         @relation("BookingConvertedLead", fields: [convertedLeadId], references: [id], onDelete: SetNull)
+  clientId        String?
+  client          Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([preferredDate])
+}
+
+model FieldCheckIn {
+  id             String        @id @default(cuid())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  type           CheckInType
+  latitude       Float?
+  longitude      Float?
+  notes          String?
+  employeeId     String
+  employee       Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  scheduleItemId String?
+  scheduleItem   ScheduleItem? @relation(fields: [scheduleItemId], references: [id], onDelete: SetNull)
+
+  @@index([employeeId, createdAt])
+  @@index([type])
+}
+
+model AutomationRule {
+  id               String         @id @default(cuid())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  name             String
+  channel          ChannelType
+  triggerEvent     String
+  sendAfterMinutes Int            @default(0)
+  templateSubject  String?
+  templateBody     String
+  status           CampaignStatus @default(ACTIVE)
+  clientId         String?
+  client           Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  logs             MessageLog[]
+
+  @@index([status])
+  @@index([triggerEvent])
+}
+
+model MessageLog {
+  id           String          @id @default(cuid())
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  recipient    String
+  channel      ChannelType
+  subject      String?
+  body         String
+  status       MessageStatus   @default(QUEUED)
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  campaignId   String?
+  campaign     AutomationRule? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  clientId     String?
+  client       Client?         @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([scheduledFor])
+}
+
+model PaymentRecord {
+  id                String        @id @default(cuid())
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  amountCents       Int
+  processor         String
+  externalReference String?
+  status            PaymentStatus @default(PENDING)
+  paidAt            DateTime?
+  notes             String?
+  invoiceId         String
+  invoice           Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+  @@index([status])
+}
+
+model PaymentProcessor {
+  id                   String   @id @default(cuid())
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  name                 String   @unique
+  enabled              Boolean  @default(false)
+  sandboxMode          Boolean  @default(true)
+  publishableKeyMasked String?
+  webhookUrl           String?
+  notes                String?
+}
+
+model PayrollRun {
+  id              String         @id @default(cuid())
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  periodStart     DateTime
+  periodEnd       DateTime
+  status          PayrollStatus  @default(DRAFT)
+  totalGrossCents Int            @default(0)
+  processedAt     DateTime?
+  notes           String?
+  entries         PayrollEntry[]
+
+  @@index([periodStart, periodEnd])
+  @@index([status])
+}
+
+model PayrollEntry {
+  id            String     @id @default(cuid())
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  payrollRunId  String
+  payrollRun    PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  hoursWorked   Int
+  baseRateCents Int
+  bonusCents    Int        @default(0)
+  grossCents    Int
+  notes         String?
+
+  @@index([payrollRunId])
+  @@index([employeeId])
+}
+
+model AvailabilityBlock {
+  id         String           @id @default(cuid())
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  startAt    DateTime
+  endAt      DateTime
+  type       AvailabilityType @default(BLOCKED)
+  reason     String?
+  approved   Boolean          @default(false)
+  employeeId String
+  employee   Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId, startAt])
+  @@index([type])
+}
+
+model IntegrationConnection {
+  id                  String            @id @default(cuid())
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  provider            String            @unique
+  status              IntegrationStatus @default(DISCONNECTED)
+  apiKeyMasked        String?
+  webhookUrl          String?
+  syncIntervalMinutes Int               @default(15)
+  lastSyncAt          DateTime?
+  notes               String?
+
+  @@index([status])
+}
+
+model PlanTier {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  code              String   @unique
+  name              String
+  monthlyPriceCents Int
+  maxUsers          Int
+  maxClients        Int
+  maxProperties     Int
+  apiAccess         Boolean  @default(false)
+  mobileAccess      Boolean  @default(false)
+  automationAccess  Boolean  @default(false)
+}
+
+model ExportJob {
+  id          String       @id @default(cuid())
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  resource    String
+  format      String       @default("csv")
+  status      ExportStatus @default(QUEUED)
+  requestedBy String?
+  downloadUrl String?
+  completedAt DateTime?
+  notes       String?
+
+  @@index([resource, status])
 }

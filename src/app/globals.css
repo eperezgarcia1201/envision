@@ -930,6 +930,8 @@ textarea:focus {
   right: 0;
   top: calc(100% + 0.4rem);
   min-width: 210px;
+  max-height: 360px;
+  overflow: auto;
   border-radius: 0.72rem;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: #122d62;
@@ -1035,6 +1037,7 @@ textarea:focus {
   display: grid;
   grid-template-rows: 1fr auto;
   gap: 1rem;
+  max-height: calc(100vh - 155px);
 }
 
 .crm-side-list {
@@ -1043,6 +1046,8 @@ textarea:focus {
   padding: 0;
   display: grid;
   gap: 0.32rem;
+  overflow: auto;
+  padding-right: 0.1rem;
 }
 
 .crm-side-link {
@@ -1509,6 +1514,7 @@ textarea:focus {
 
   .crm-sidebar {
     grid-template-rows: auto auto;
+    max-height: none;
   }
 
   .crm-form-grid {

@@ -51,6 +51,11 @@ export default async function AdminInvoicesPage() {
           href: (item) => `/api/invoices/${item.id}/pdf`,
           openInNewTab: true,
         },
+        {
+          label: "Apply Payment",
+          href: (item) => `/api/invoices/${item.id}/payment`,
+          openInNewTab: true,
+        },
       ]}
       columns={[
         { key: "invoiceNumber", label: "Invoice #" },

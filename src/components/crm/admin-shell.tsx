@@ -51,14 +51,24 @@ export function AdminShell({ user, children }: AdminShellProps) {
           <details className="crm-create-menu">
             <summary className="crm-create-btn">Create New +</summary>
             <div className="crm-create-menu-list">
+              <Link href="/admin/onboarding?create=1">Onboarding Task</Link>
               <Link href="/admin/leads?create=1">Lead</Link>
+              <Link href="/admin/bookings?create=1">Booking Request</Link>
+              <Link href="/admin/contacts?create=1">Contact</Link>
               <Link href="/admin/work-orders?create=1">Work Order</Link>
               <Link href="/admin/clients?create=1">Client</Link>
               <Link href="/admin/properties?create=1">Property</Link>
               <Link href="/admin/estimates?create=1">Estimate</Link>
               <Link href="/admin/invoices?create=1">Invoice</Link>
+              <Link href="/admin/payments?create=1">Payment</Link>
               <Link href="/admin/employees?create=1">Employee</Link>
+              <Link href="/admin/availability?create=1">Availability Block</Link>
+              <Link href="/admin/check-ins?create=1">Check-In</Link>
               <Link href="/admin/schedule?create=1">Schedule Item</Link>
+              <Link href="/admin/communications?create=1">Automation Rule</Link>
+              <Link href="/admin/payroll?create=1">Payroll Run</Link>
+              <Link href="/admin/integrations?create=1">Integration</Link>
+              <Link href="/admin/plans?create=1">Plan Tier</Link>
             </div>
           </details>
           <label className="crm-search-wrap" htmlFor="crm-search-input">

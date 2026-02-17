@@ -1,11 +1,23 @@
 import { hash } from "bcryptjs";
 import {
   ActivitySeverity,
+  AvailabilityType,
+  BookingStatus,
+  CampaignStatus,
+  ChannelType,
+  CheckInType,
+  ContactStatus,
   EmployeeRole,
   EmployeeStatus,
   EstimateStatus,
+  ExportStatus,
+  IntegrationStatus,
   InvoiceStatus,
   LeadStatus,
+  MessageStatus,
+  OnboardingStatus,
+  PaymentStatus,
+  PayrollStatus,
   PrismaClient,
   Priority,
   ScheduleStatus,
@@ -25,6 +37,16 @@ function dateAtOffset(daysOffset, hour = 9, minute = 0) {
 async function main() {
   await prisma.session.deleteMany();
   await prisma.activityLog.deleteMany();
+  await prisma.fieldCheckIn.deleteMany();
+  await prisma.availabilityBlock.deleteMany();
+  await prisma.payrollEntry.deleteMany();
+  await prisma.payrollRun.deleteMany();
+  await prisma.paymentRecord.deleteMany();
+  await prisma.messageLog.deleteMany();
+  await prisma.automationRule.deleteMany();
+  await prisma.onboardingTask.deleteMany();
+  await prisma.contactPerson.deleteMany();
+  await prisma.bookingRequest.deleteMany();
   await prisma.scheduleItem.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.estimate.deleteMany();
@@ -36,6 +58,10 @@ async function main() {
   await prisma.lead.deleteMany();
   await prisma.galleryAsset.deleteMany();
   await prisma.servicePackage.deleteMany();
+  await prisma.integrationConnection.deleteMany();
+  await prisma.planTier.deleteMany();
+  await prisma.paymentProcessor.deleteMany();
+  await prisma.exportJob.deleteMany();
 
   const adminPassword = process.env.ADMIN_PASSWORD ?? "1234qwer";
   const adminPasswordHash = await hash(adminPassword, 12);
@@ -932,6 +958,410 @@ async function main() {
     prisma.estimate.update({
       where: { id: estimateE.id },
       data: { notes: "Budget freeze for current quarter." },
+    }),
+  ]);
+
+  const [processorStripe, processorSquare] = await Promise.all([
+    prisma.paymentProcessor.create({
+      data: {
+        name: "Stripe",
+        enabled: true,
+        sandboxMode: true,
+        publishableKeyMasked: "pk_test_****************",
+        webhookUrl: "https://api.envisionmaintenence.com/webhooks/stripe",
+        notes: "Primary card processor for portal invoicing.",
+      },
+    }),
+    prisma.paymentProcessor.create({
+      data: {
+        name: "Square",
+        enabled: false,
+        sandboxMode: true,
+        publishableKeyMasked: "sq0idp-****************",
+        webhookUrl: "https://api.envisionmaintenence.com/webhooks/square",
+      },
+    }),
+  ]);
+
+  const invoices = await prisma.invoice.findMany({
+    orderBy: [{ createdAt: "asc" }],
+  });
+  const invoice1 = invoices[0];
+  const invoice2 = invoices[1];
+  const invoice3 = invoices[2];
+
+  if (invoice1 && invoice2 && invoice3) {
+    await Promise.all([
+      prisma.paymentRecord.create({
+        data: {
+          invoiceId: invoice1.id,
+          amountCents: 2425000,
+          processor: processorStripe.name,
+          externalReference: "ch_3N8xN*****",
+          status: PaymentStatus.SETTLED,
+          paidAt: dateAtOffset(-2, 11, 10),
+          notes: "Partial settlement for current cycle.",
+        },
+      }),
+      prisma.paymentRecord.create({
+        data: {
+          invoiceId: invoice2.id,
+          amountCents: 1200000,
+          processor: processorStripe.name,
+          externalReference: "ch_3N9wE*****",
+          status: PaymentStatus.SETTLED,
+          paidAt: dateAtOffset(-1, 10, 5),
+          notes: "First payment toward overdue balance.",
+        },
+      }),
+      prisma.paymentRecord.create({
+        data: {
+          invoiceId: invoice3.id,
+          amountCents: invoice3.amountCents,
+          processor: processorSquare.name,
+          externalReference: "sq_txn_2*****",
+          status: PaymentStatus.SETTLED,
+          paidAt: dateAtOffset(-6, 12, 0),
+        },
+      }),
+    ]);
+  }
+
+  await Promise.all([
+    prisma.onboardingTask.create({
+      data: {
+        title: "Import previous customer ledger",
+        owner: "Naomi Lee",
+        status: OnboardingStatus.IN_PROGRESS,
+        dueDate: dateAtOffset(2, 17, 0),
+        notes: "Migrate contacts and open invoice balances.",
+        clientId: clientA.id,
+      },
+    }),
+    prisma.onboardingTask.create({
+      data: {
+        title: "Configure dispatch zones",
+        owner: "Irene Brooks",
+        status: OnboardingStatus.PENDING,
+        dueDate: dateAtOffset(4, 17, 0),
+        clientId: clientB.id,
+      },
+    }),
+    prisma.onboardingTask.create({
+      data: {
+        title: "Run kickoff walkthrough",
+        owner: "Carlos Mendez",
+        status: OnboardingStatus.COMPLETED,
+        dueDate: dateAtOffset(-2, 15, 0),
+        completedAt: dateAtOffset(-2, 18, 0),
+        clientId: clientC.id,
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.contactPerson.create({
+      data: {
+        fullName: "Naomi Lee",
+        email: "naomi.lee@sunsetmedicalcenters.com",
+        phone: "(323) 555-1240",
+        title: "Portfolio Director",
+        status: ContactStatus.ACTIVE,
+        isPrimary: true,
+        isBilling: false,
+        clientId: clientA.id,
+      },
+    }),
+    prisma.contactPerson.create({
+      data: {
+        fullName: "Rachel Dunn",
+        email: "billing@sunsetmedicalcenters.com",
+        phone: "(323) 555-7331",
+        title: "AP Supervisor",
+        status: ContactStatus.ACTIVE,
+        isPrimary: false,
+        isBilling: true,
+        clientId: clientA.id,
+      },
+    }),
+    prisma.contactPerson.create({
+      data: {
+        fullName: "Maya Franklin",
+        email: "maya.franklin@apexresidential.com",
+        phone: "(323) 555-1020",
+        title: "Regional Manager",
+        status: ContactStatus.ACTIVE,
+        isPrimary: true,
+        clientId: clientB.id,
+      },
+    }),
+  ]);
+
+  const bookingA = await prisma.bookingRequest.create({
+    data: {
+      name: "Elijah Knox",
+      email: "elijah.knox@citylineoffices.com",
+      phone: "(310) 555-4502",
+      company: "Cityline Offices",
+      address: "221 S Olive St, Los Angeles, CA",
+      serviceType: "Commercial Cleaning",
+      frequency: "Weekly",
+      preferredDate: dateAtOffset(3, 8, 30),
+      source: "website-booking",
+      status: BookingStatus.REVIEWED,
+      notes: "Requesting evening shifts only.",
+      convertedLeadId: leadA.id,
+    },
+  });
+
+  await prisma.bookingRequest.create({
+    data: {
+      name: "Nora Hall",
+      email: "nhall@loftdistrict.co",
+      phone: "(213) 555-6112",
+      company: "Loft District",
+      serviceType: "Property Turnover",
+      frequency: "One-Time",
+      preferredDate: dateAtOffset(1, 10, 0),
+      source: "website-booking",
+      status: BookingStatus.NEW,
+      notes: "Urgent move-out prep for 6 units.",
+    },
+  });
+
+  await Promise.all([
+    prisma.fieldCheckIn.create({
+      data: {
+        type: CheckInType.CLOCK_IN,
+        employeeId: employeeA.id,
+        scheduleItemId: (await prisma.scheduleItem.findFirst({ orderBy: { createdAt: "asc" } }))?.id ?? null,
+        latitude: 34.0469,
+        longitude: -118.2517,
+        notes: "Clocked in from property lot.",
+      },
+    }),
+    prisma.fieldCheckIn.create({
+      data: {
+        type: CheckInType.ON_MY_WAY,
+        employeeId: employeeB.id,
+        latitude: 34.0601,
+        longitude: -118.2387,
+        notes: "ETA 12 minutes",
+      },
+    }),
+    prisma.fieldCheckIn.create({
+      data: {
+        type: CheckInType.COMPLETE,
+        employeeId: employeeC.id,
+        latitude: 34.0241,
+        longitude: -118.2865,
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.automationRule.create({
+      data: {
+        name: "Booking Confirmation",
+        channel: ChannelType.EMAIL,
+        triggerEvent: "booking.created",
+        sendAfterMinutes: 2,
+        templateSubject: "Booking received by Envision Maintenence",
+        templateBody:
+          "Thank you for your request. Our operations team is reviewing your booking and will confirm service timing shortly.",
+        status: CampaignStatus.ACTIVE,
+      },
+    }),
+    prisma.automationRule.create({
+      data: {
+        name: "Invoice Due Reminder",
+        channel: ChannelType.SMS,
+        triggerEvent: "invoice.due_48h",
+        sendAfterMinutes: 0,
+        templateBody: "Friendly reminder: your invoice is due in 48 hours. Reply HELP for assistance.",
+        status: CampaignStatus.ACTIVE,
+        clientId: clientB.id,
+      },
+    }),
+  ]);
+
+  const rules = await prisma.automationRule.findMany({
+    orderBy: [{ createdAt: "asc" }],
+  });
+  const ruleA = rules[0];
+  const ruleB = rules[1];
+
+  await Promise.all([
+    prisma.messageLog.create({
+      data: {
+        recipient: bookingA.email,
+        channel: ChannelType.EMAIL,
+        subject: "Booking confirmation",
+        body: "We received your booking and opened intake record BK-001.",
+        status: MessageStatus.SENT,
+        sentAt: dateAtOffset(0, 9, 2),
+        campaignId: ruleA?.id ?? null,
+      },
+    }),
+    prisma.messageLog.create({
+      data: {
+        recipient: clientB.phone,
+        channel: ChannelType.SMS,
+        body: "Invoice reminder: payment due within 48 hours.",
+        status: MessageStatus.QUEUED,
+        scheduledFor: dateAtOffset(1, 8, 0),
+        campaignId: ruleB?.id ?? null,
+        clientId: clientB.id,
+      },
+    }),
+  ]);
+
+  const payrollRun = await prisma.payrollRun.create({
+    data: {
+      periodStart: dateAtOffset(-13, 0, 0),
+      periodEnd: dateAtOffset(0, 0, 0),
+      status: PayrollStatus.APPROVED,
+      totalGrossCents: 0,
+      notes: "Bi-weekly payroll for field team.",
+    },
+  });
+
+  await Promise.all([
+    prisma.payrollEntry.create({
+      data: {
+        payrollRunId: payrollRun.id,
+        employeeId: employeeA.id,
+        hoursWorked: 80,
+        baseRateCents: 4800,
+        bonusCents: 40000,
+        grossCents: 424000,
+      },
+    }),
+    prisma.payrollEntry.create({
+      data: {
+        payrollRunId: payrollRun.id,
+        employeeId: employeeB.id,
+        hoursWorked: 76,
+        baseRateCents: 4200,
+        bonusCents: 25000,
+        grossCents: 344200,
+      },
+    }),
+  ]);
+
+  await prisma.payrollRun.update({
+    where: { id: payrollRun.id },
+    data: {
+      totalGrossCents: 768200,
+    },
+  });
+
+  await Promise.all([
+    prisma.availabilityBlock.create({
+      data: {
+        employeeId: employeeC.id,
+        startAt: dateAtOffset(2, 8, 0),
+        endAt: dateAtOffset(2, 17, 0),
+        type: AvailabilityType.TIME_OFF,
+        reason: "Personal leave",
+        approved: true,
+      },
+    }),
+    prisma.availabilityBlock.create({
+      data: {
+        employeeId: employeeD.id,
+        startAt: dateAtOffset(1, 13, 0),
+        endAt: dateAtOffset(1, 18, 0),
+        type: AvailabilityType.BLOCKED,
+        reason: "Training session",
+        approved: true,
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.integrationConnection.create({
+      data: {
+        provider: "zapier",
+        status: IntegrationStatus.CONNECTED,
+        apiKeyMasked: "zap_****************",
+        webhookUrl: "https://hooks.zapier.com/hooks/catch/******",
+        syncIntervalMinutes: 15,
+        lastSyncAt: dateAtOffset(0, 6, 30),
+        notes: "Connected for marketing and accounting automations.",
+      },
+    }),
+    prisma.integrationConnection.create({
+      data: {
+        provider: "quickbooks",
+        status: IntegrationStatus.PENDING,
+        syncIntervalMinutes: 60,
+        notes: "Planned for next billing phase rollout.",
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.planTier.create({
+      data: {
+        code: "STARTER",
+        name: "Starter",
+        monthlyPriceCents: 9900,
+        maxUsers: 5,
+        maxClients: 50,
+        maxProperties: 80,
+        apiAccess: false,
+        mobileAccess: true,
+        automationAccess: false,
+      },
+    }),
+    prisma.planTier.create({
+      data: {
+        code: "PRO",
+        name: "Pro",
+        monthlyPriceCents: 24900,
+        maxUsers: 20,
+        maxClients: 300,
+        maxProperties: 500,
+        apiAccess: true,
+        mobileAccess: true,
+        automationAccess: true,
+      },
+    }),
+    prisma.planTier.create({
+      data: {
+        code: "ENTERPRISE",
+        name: "Enterprise",
+        monthlyPriceCents: 59900,
+        maxUsers: 100,
+        maxClients: 2500,
+        maxProperties: 8000,
+        apiAccess: true,
+        mobileAccess: true,
+        automationAccess: true,
+      },
+    }),
+  ]);
+
+  await Promise.all([
+    prisma.exportJob.create({
+      data: {
+        resource: "invoices",
+        format: "csv",
+        status: ExportStatus.COMPLETED,
+        requestedBy: adminUser.username,
+        completedAt: dateAtOffset(0, 7, 0),
+        notes: "Nightly accounting export.",
+      },
+    }),
+    prisma.exportJob.create({
+      data: {
+        resource: "work-orders",
+        format: "csv",
+        status: ExportStatus.QUEUED,
+        requestedBy: managerUser.username,
+        notes: "Scheduled operations report export.",
+      },
     }),
   ]);
 }

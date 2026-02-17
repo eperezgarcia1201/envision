@@ -1,7 +1,11 @@
 import {
+  BookingStatus,
+  CampaignStatus,
   EstimateStatus,
   InvoiceStatus,
   LeadStatus,
+  MessageStatus,
+  OnboardingStatus,
   type Prisma,
   WorkOrderStatus,
   type ActivitySeverity,
@@ -98,6 +102,10 @@ export async function getCrmDashboardData() {
     openWorkOrdersCount,
     workOrderStatusGroups,
     invoiceStatusGroups,
+    activeBookingsCount,
+    onboardingOpenCount,
+    queuedMessagesCount,
+    activeAutomationCount,
   ] = await Promise.all([
     prisma.lead.findMany({
       select: {
@@ -204,6 +212,30 @@ export async function getCrmDashboardData() {
         id: true,
       },
     }),
+    prisma.bookingRequest.count({
+      where: {
+        status: {
+          in: [BookingStatus.NEW, BookingStatus.REVIEWED, BookingStatus.QUOTED],
+        },
+      },
+    }),
+    prisma.onboardingTask.count({
+      where: {
+        status: {
+          in: [OnboardingStatus.PENDING, OnboardingStatus.IN_PROGRESS, OnboardingStatus.BLOCKED],
+        },
+      },
+    }),
+    prisma.messageLog.count({
+      where: {
+        status: MessageStatus.QUEUED,
+      },
+    }),
+    prisma.automationRule.count({
+      where: {
+        status: CampaignStatus.ACTIVE,
+      },
+    }),
   ]);
 
   const leadPipeline = Object.values(LeadStatus).map((status) => ({
@@ -253,6 +285,10 @@ export async function getCrmDashboardData() {
       overdueAmountCents,
       overdueCount: overdueInvoices.length,
       openWorkOrdersCount,
+      activeBookingsCount,
+      onboardingOpenCount,
+      queuedMessagesCount,
+      activeAutomationCount,
     },
     leadPipeline,
     revenueSeries,

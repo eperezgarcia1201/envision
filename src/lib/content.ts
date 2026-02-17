@@ -3,6 +3,7 @@ export const navLinks = [
   { href: "/about", label: "About" },
   { href: "/services", label: "Services" },
   { href: "/gallery", label: "Gallery" },
+  { href: "/book", label: "Book" },
   { href: "/platform", label: "Platform" },
   { href: "/portal", label: "Portal" },
   { href: "/admin", label: "Admin" },
@@ -201,6 +202,81 @@ export const apiEndpointsPreview = [
     method: "GET",
     path: "/api/estimates/:id/pdf",
     description: "Generate downloadable quote/estimate PDF for client approvals.",
+  },
+  {
+    method: "GET",
+    path: "/api/bookings",
+    description: "Read booking intake requests created from website and partner form submissions.",
+  },
+  {
+    method: "POST",
+    path: "/api/bookings",
+    description: "Create booking requests and auto-create linked leads for intake.",
+  },
+  {
+    method: "GET",
+    path: "/api/contacts",
+    description: "Manage client contact roster, billing contacts, and communication status.",
+  },
+  {
+    method: "GET",
+    path: "/api/onboarding",
+    description: "Track onboarding checklists, migration steps, and go-live milestones.",
+  },
+  {
+    method: "POST",
+    path: "/api/estimates/:id/convert",
+    description: "Convert estimate records into work orders while preserving references.",
+  },
+  {
+    method: "POST",
+    path: "/api/invoices/:id/payment",
+    description: "Apply invoice payments and update invoice status to partial/paid automatically.",
+  },
+  {
+    method: "GET",
+    path: "/api/payments",
+    description: "List payment records for collections and reconciliation.",
+  },
+  {
+    method: "GET",
+    path: "/api/payment-processors",
+    description: "Configure payment provider bridge settings and webhooks.",
+  },
+  {
+    method: "GET",
+    path: "/api/payroll-runs",
+    description: "Manage payroll periods and aggregate gross totals.",
+  },
+  {
+    method: "GET",
+    path: "/api/availability",
+    description: "Control employee availability, PTO windows, and dispatch constraints.",
+  },
+  {
+    method: "GET",
+    path: "/api/automations",
+    description: "Configure email/SMS automation rules for reminders and follow-ups.",
+  },
+  {
+    method: "GET",
+    path: "/api/messages",
+    description: "Inspect outbound message queue and delivery logs.",
+  },
+  {
+    method: "GET",
+    path: "/api/integrations",
+    description: "Track third-party integration connectors and sync status.",
+  },
+  {
+    method: "GET",
+    path: "/api/plans",
+    description: "Define plan tiers and feature entitlements for clients.",
+  },
+  {
+    method: "GET",
+    path: "/api/reports/export?resource=invoices",
+    description: "Export core data sets to CSV and record export jobs for audit.",
   },
 ];
 

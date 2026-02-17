@@ -35,6 +35,18 @@ const scheduleStatusSchema = z.enum([
   "CANCELED",
 ]);
 const userRoleSchema = z.enum(["ADMIN", "MANAGER", "CLIENT"]);
+const onboardingStatusSchema = z.enum(["PENDING", "IN_PROGRESS", "COMPLETED", "BLOCKED"]);
+const contactStatusSchema = z.enum(["ACTIVE", "INACTIVE", "DO_NOT_CONTACT"]);
+const bookingStatusSchema = z.enum(["NEW", "REVIEWED", "QUOTED", "WON", "CLOSED"]);
+const checkInTypeSchema = z.enum(["CLOCK_IN", "CLOCK_OUT", "ON_MY_WAY", "ARRIVED", "COMPLETE"]);
+const channelTypeSchema = z.enum(["EMAIL", "SMS"]);
+const campaignStatusSchema = z.enum(["ACTIVE", "PAUSED", "DISABLED"]);
+const messageStatusSchema = z.enum(["QUEUED", "SENT", "FAILED", "CANCELED"]);
+const paymentStatusSchema = z.enum(["PENDING", "SETTLED", "FAILED", "REFUNDED", "VOID"]);
+const payrollStatusSchema = z.enum(["DRAFT", "APPROVED", "PROCESSED", "CANCELED"]);
+const availabilityTypeSchema = z.enum(["AVAILABLE", "BLOCKED", "TIME_OFF", "PTO"]);
+const integrationStatusSchema = z.enum(["CONNECTED", "DISCONNECTED", "ERROR", "PENDING"]);
+const exportStatusSchema = z.enum(["QUEUED", "COMPLETED", "FAILED"]);
 
 export const loginInputSchema = z.object({
   username: z.string().trim().min(3).max(64),
@@ -192,6 +204,188 @@ export const servicePackageInputSchema = z.object({
 });
 
 export const servicePackageUpdateSchema = servicePackageInputSchema.partial();
+
+export const onboardingTaskInputSchema = z.object({
+  title: z.string().trim().min(3).max(160),
+  owner: z.string().trim().max(120).optional().nullable(),
+  status: onboardingStatusSchema.default("PENDING"),
+  dueDate: z.string().datetime().optional().nullable(),
+  completedAt: z.string().datetime().optional().nullable(),
+  notes: z.string().trim().max(2000).optional().nullable(),
+  clientId: z.string().trim().min(3).max(40).optional().nullable(),
+});
+
+export const onboardingTaskUpdateSchema = onboardingTaskInputSchema.partial();
+
+export const contactPersonInputSchema = z.object({
+  fullName: z.string().trim().min(2).max(120),
+  email: z.string().trim().email(),
+  phone: z.string().trim().min(7).max(25).optional().nullable(),
+  title: z.string().trim().max(120).optional().nullable(),
+  status: contactStatusSchema.default("ACTIVE"),
+  isPrimary: z.coerce.boolean().default(false),
+  isBilling: z.coerce.boolean().default(false),
+  notes: z.string().trim().max(2000).optional().nullable(),
+  clientId: z.string().trim().min(3).max(40),
+});
+
+export const contactPersonUpdateSchema = contactPersonInputSchema.partial();
+
+export const bookingRequestInputSchema = z.object({
+  name: z.string().trim().min(2).max(120),
+  email: z.string().trim().email(),
+  phone: z.string().trim().min(7).max(25).optional().nullable(),
+  company: z.string().trim().max(160).optional().nullable(),
+  address: z.string().trim().max(240).optional().nullable(),
+  serviceType: z.string().trim().min(2).max(160),
+  frequency: z.string().trim().max(80).optional().nullable(),
+  preferredDate: z.string().datetime().optional().nullable(),
+  source: z.string().trim().max(60).default("website-booking"),
+  status: bookingStatusSchema.default("NEW"),
+  notes: z.string().trim().max(2000).optional().nullable(),
+  convertedLeadId: z.string().trim().min(3).max(40).optional().nullable(),
+  clientId: z.string().trim().min(3).max(40).optional().nullable(),
+});
+
+export const bookingRequestUpdateSchema = bookingRequestInputSchema.partial();
+
+export const fieldCheckInInputSchema = z.object({
+  type: checkInTypeSchema,
+  latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
+  longitude: z.coerce.number().min(-180).max(180).optional().nullable(),
+  notes: z.string().trim().max(1000).optional().nullable(),
+  employeeId: z.string().trim().min(3).max(40),
+  scheduleItemId: z.string().trim().min(3).max(40).optional().nullable(),
+});
+
+export const fieldCheckInUpdateSchema = fieldCheckInInputSchema.partial();
+
+export const automationRuleInputSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+  channel: channelTypeSchema,
+  triggerEvent: z.string().trim().min(2).max(120),
+  sendAfterMinutes: z.coerce.number().int().min(0).max(10080).default(0),
+  templateSubject: z.string().trim().max(180).optional().nullable(),
+  templateBody: z.string().trim().min(5).max(5000),
+  status: campaignStatusSchema.default("ACTIVE"),
+  clientId: z.string().trim().min(3).max(40).optional().nullable(),
+});
+
+export const automationRuleUpdateSchema = automationRuleInputSchema.partial();
+
+export const messageLogInputSchema = z.object({
+  recipient: z.string().trim().min(3).max(160),
+  channel: channelTypeSchema,
+  subject: z.string().trim().max(180).optional().nullable(),
+  body: z.string().trim().min(2).max(5000),
+  status: messageStatusSchema.default("QUEUED"),
+  scheduledFor: z.string().datetime().optional().nullable(),
+  sentAt: z.string().datetime().optional().nullable(),
+  campaignId: z.string().trim().min(3).max(40).optional().nullable(),
+  clientId: z.string().trim().min(3).max(40).optional().nullable(),
+});
+
+export const messageLogUpdateSchema = messageLogInputSchema.partial();
+
+export const paymentRecordInputSchema = z.object({
+  amountCents: z.coerce.number().int().min(1).max(500000000),
+  processor: z.string().trim().min(2).max(60),
+  externalReference: z.string().trim().max(120).optional().nullable(),
+  status: paymentStatusSchema.default("PENDING"),
+  paidAt: z.string().datetime().optional().nullable(),
+  notes: z.string().trim().max(1000).optional().nullable(),
+  invoiceId: z.string().trim().min(3).max(40),
+});
+
+export const paymentRecordUpdateSchema = paymentRecordInputSchema.partial();
+
+export const paymentProcessorInputSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  enabled: z.coerce.boolean().default(false),
+  sandboxMode: z.coerce.boolean().default(true),
+  publishableKeyMasked: z.string().trim().max(120).optional().nullable(),
+  webhookUrl: z.string().trim().url().optional().nullable(),
+  notes: z.string().trim().max(1000).optional().nullable(),
+});
+
+export const paymentProcessorUpdateSchema = paymentProcessorInputSchema.partial();
+
+export const payrollRunInputSchema = z.object({
+  periodStart: z.string().datetime(),
+  periodEnd: z.string().datetime(),
+  status: payrollStatusSchema.default("DRAFT"),
+  totalGrossCents: z.coerce.number().int().min(0).max(500000000).default(0),
+  processedAt: z.string().datetime().optional().nullable(),
+  notes: z.string().trim().max(2000).optional().nullable(),
+});
+
+export const payrollRunUpdateSchema = payrollRunInputSchema.partial();
+
+export const payrollEntryInputSchema = z.object({
+  payrollRunId: z.string().trim().min(3).max(40),
+  employeeId: z.string().trim().min(3).max(40),
+  hoursWorked: z.coerce.number().int().min(0).max(300),
+  baseRateCents: z.coerce.number().int().min(0).max(200000),
+  bonusCents: z.coerce.number().int().min(0).max(50000000).default(0),
+  grossCents: z.coerce.number().int().min(0).max(500000000),
+  notes: z.string().trim().max(1000).optional().nullable(),
+});
+
+export const payrollEntryUpdateSchema = payrollEntryInputSchema.partial();
+
+export const availabilityBlockInputSchema = z.object({
+  startAt: z.string().datetime(),
+  endAt: z.string().datetime(),
+  type: availabilityTypeSchema.default("BLOCKED"),
+  reason: z.string().trim().max(1000).optional().nullable(),
+  approved: z.coerce.boolean().default(false),
+  employeeId: z.string().trim().min(3).max(40),
+});
+
+export const availabilityBlockUpdateSchema = availabilityBlockInputSchema.partial();
+
+export const integrationConnectionInputSchema = z.object({
+  provider: z.string().trim().min(2).max(80),
+  status: integrationStatusSchema.default("DISCONNECTED"),
+  apiKeyMasked: z.string().trim().max(120).optional().nullable(),
+  webhookUrl: z.string().trim().url().optional().nullable(),
+  syncIntervalMinutes: z.coerce.number().int().min(1).max(1440).default(15),
+  lastSyncAt: z.string().datetime().optional().nullable(),
+  notes: z.string().trim().max(1000).optional().nullable(),
+});
+
+export const integrationConnectionUpdateSchema = integrationConnectionInputSchema.partial();
+
+export const planTierInputSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .min(2)
+    .max(40)
+    .regex(/^[A-Z0-9_]+$/),
+  name: z.string().trim().min(2).max(120),
+  monthlyPriceCents: z.coerce.number().int().min(0).max(100000000),
+  maxUsers: z.coerce.number().int().min(1).max(10000),
+  maxClients: z.coerce.number().int().min(1).max(10000),
+  maxProperties: z.coerce.number().int().min(1).max(100000),
+  apiAccess: z.coerce.boolean().default(false),
+  mobileAccess: z.coerce.boolean().default(false),
+  automationAccess: z.coerce.boolean().default(false),
+});
+
+export const planTierUpdateSchema = planTierInputSchema.partial();
+
+export const exportJobInputSchema = z.object({
+  resource: z.string().trim().min(2).max(80),
+  format: z.string().trim().min(2).max(20).default("csv"),
+  status: exportStatusSchema.default("QUEUED"),
+  requestedBy: z.string().trim().max(120).optional().nullable(),
+  downloadUrl: z.string().trim().url().optional().nullable(),
+  completedAt: z.string().datetime().optional().nullable(),
+  notes: z.string().trim().max(1000).optional().nullable(),
+});
+
+export const exportJobUpdateSchema = exportJobInputSchema.partial();
 
 export const idParamSchema = z.object({
   id: z.string().trim().min(3).max(64),

@@ -40,6 +40,26 @@ export default async function AdminDashboardPage() {
             <strong>{data.metrics.overdueCount}</strong>
             <span>{formatCurrencyFromCents(data.metrics.overdueAmountCents)} overdue</span>
           </article>
+          <article className="crm-kpi-card">
+            <p>Active Bookings</p>
+            <strong>{data.metrics.activeBookingsCount}</strong>
+            <span>Intake items pending conversion</span>
+          </article>
+          <article className="crm-kpi-card">
+            <p>Onboarding Open</p>
+            <strong>{data.metrics.onboardingOpenCount}</strong>
+            <span>Tasks across pending accounts</span>
+          </article>
+          <article className="crm-kpi-card">
+            <p>Queued Messages</p>
+            <strong>{data.metrics.queuedMessagesCount}</strong>
+            <span>Pending outbound notifications</span>
+          </article>
+          <article className="crm-kpi-card">
+            <p>Active Automations</p>
+            <strong>{data.metrics.activeAutomationCount}</strong>
+            <span>Live trigger rules</span>
+          </article>
         </div>
       </section>
 

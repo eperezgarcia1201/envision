@@ -19,6 +19,7 @@ const publicLinks = [
   { href: "/about", label: "About" },
   { href: "/services", label: "Services" },
   { href: "/gallery", label: "Gallery" },
+  { href: "/book", label: "Book" },
   { href: "/platform", label: "Platform" },
   { href: "/api-docs", label: "API Docs" },
   { href: "/contact", label: "Contact" },

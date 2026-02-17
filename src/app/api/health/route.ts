@@ -12,6 +12,10 @@ export async function GET() {
       employeeCount,
       scheduleCount,
       activityCount,
+      bookingCount,
+      paymentCount,
+      payrollRunCount,
+      integrationCount,
     ] = await Promise.all([
       prisma.lead.count(),
       prisma.workOrder.count(),
@@ -21,6 +25,10 @@ export async function GET() {
       prisma.employee.count(),
       prisma.scheduleItem.count(),
       prisma.activityLog.count(),
+      prisma.bookingRequest.count(),
+      prisma.paymentRecord.count(),
+      prisma.payrollRun.count(),
+      prisma.integrationConnection.count(),
     ]);
 
     return NextResponse.json({
@@ -35,6 +43,10 @@ export async function GET() {
         employeeCount,
         scheduleCount,
         activityCount,
+        bookingCount,
+        paymentCount,
+        payrollRunCount,
+        integrationCount,
       },
     });
   } catch (error) {

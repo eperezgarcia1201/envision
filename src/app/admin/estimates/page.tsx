@@ -62,6 +62,11 @@ export default async function AdminEstimatesPage() {
           href: (item) => `/api/estimates/${item.id}/pdf`,
           openInNewTab: true,
         },
+        {
+          label: "Convert",
+          href: (item) => `/api/estimates/${item.id}/convert`,
+          openInNewTab: true,
+        },
       ]}
       columns={[
         { key: "estimateNumber", label: "Estimate #" },
