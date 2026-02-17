@@ -1,22 +1,29 @@
 import { LeadStatus, UserRole } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireRoleFromRequest } from "@/lib/auth";
+import { getCurrentUserFromRequest, requireRoleFromRequest } from "@/lib/auth";
 import { leadInputSchema } from "@/lib/validators";
+import {
+  badRequest,
+  createNumber,
+  getTakeFromSearchParams,
+  readJsonBody,
+  serverError,
+  unauthorized,
+} from "@/lib/api";
 
 const statuses = new Set(Object.values(LeadStatus));
 
 export async function GET(request: NextRequest) {
-  const user = await requireRoleFromRequest(request, UserRole.ADMIN);
+  const user = await requireRoleFromRequest(request, [UserRole.ADMIN, UserRole.MANAGER]);
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const { searchParams } = new URL(request.url);
   const statusParam = searchParams.get("status");
-  const takeParam = Number(searchParams.get("take") ?? "25");
-  const take = Number.isFinite(takeParam) ? Math.min(Math.max(takeParam, 1), 100) : 25;
+  const take = getTakeFromSearchParams(request, 30, 100);
 
   const where =
     statusParam && statuses.has(statusParam as LeadStatus)
@@ -25,35 +32,38 @@ export async function GET(request: NextRequest) {
         }
       : undefined;
 
-  const leads = await prisma.lead.findMany({
-    where,
-    orderBy: [{ createdAt: "desc" }],
-    take,
-  });
+  try {
+    const [leads, total] = await Promise.all([
+      prisma.lead.findMany({
+        where,
+        orderBy: [{ createdAt: "desc" }],
+        take,
+      }),
+      prisma.lead.count({ where }),
+    ]);
 
-  return NextResponse.json({ data: leads, count: leads.length });
+    return NextResponse.json({ data: leads, count: leads.length, total });
+  } catch (error) {
+    return serverError(error, "Failed to fetch leads");
+  }
 }
 
 export async function POST(request: NextRequest) {
-  let body: unknown;
+  const user = await getCurrentUserFromRequest(request);
+  const internalRoles = new Set<UserRole>([UserRole.ADMIN, UserRole.MANAGER]);
+  const body = await readJsonBody(request);
 
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  if (!body) {
+    return badRequest("Invalid JSON payload");
   }
 
   const parsed = leadInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: "Validation failed",
-        details: parsed.error.flatten(),
-      },
-      { status: 400 },
-    );
+    return badRequest("Validation failed", parsed.error.flatten());
   }
+
+  const canWriteLifecycle = user ? internalRoles.has(user.role) : false;
 
   try {
     const lead = await prisma.lead.create({
@@ -62,22 +72,27 @@ export async function POST(request: NextRequest) {
         phone: parsed.data.phone ?? null,
         company: parsed.data.company ?? null,
         serviceNeeded: parsed.data.serviceNeeded ?? null,
+        source: canWriteLifecycle ? parsed.data.source : "website",
+        status: canWriteLifecycle ? parsed.data.status : LeadStatus.NEW,
       },
     });
 
-    return NextResponse.json(
-      {
-        message: "Lead captured",
-        data: lead,
-      },
-      { status: 201 },
-    );
+    if (canWriteLifecycle && user) {
+      await prisma.activityLog.create({
+        data: {
+          actorName: user.fullName ?? user.username,
+          action: "Created lead",
+          entityType: "Lead",
+          entityId: lead.id,
+          description: `Created lead ${lead.name} (${lead.email}). Ref ${createNumber("LID")}.`,
+          severity: "INFO",
+          userId: user.id,
+        },
+      });
+    }
+
+    return NextResponse.json({ message: "Lead captured", data: lead }, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to create lead",
-      },
-      { status: 500 },
-    );
+    return serverError(error, "Failed to create lead");
   }
 }

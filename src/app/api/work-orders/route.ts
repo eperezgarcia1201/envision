@@ -3,28 +3,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireRoleFromRequest } from "@/lib/auth";
 import { workOrderInputSchema } from "@/lib/validators";
+import {
+  badRequest,
+  createNumber,
+  getTakeFromSearchParams,
+  parseDateOrNull,
+  readJsonBody,
+  serverError,
+  unauthorized,
+} from "@/lib/api";
 
 const statuses = new Set(Object.values(WorkOrderStatus));
 const priorities = new Set(Object.values(Priority));
 
-function createWorkOrderCode() {
-  const stamp = new Date().toISOString().slice(2, 10).replaceAll("-", "");
-  const suffix = Math.floor(Math.random() * 900 + 100);
-  return `WO-${stamp}-${suffix}`;
-}
-
 export async function GET(request: NextRequest) {
-  const user = await requireRoleFromRequest(request, UserRole.ADMIN);
+  const user = await requireRoleFromRequest(request, [UserRole.ADMIN, UserRole.MANAGER]);
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
   const { searchParams } = new URL(request.url);
   const statusParam = searchParams.get("status");
   const priorityParam = searchParams.get("priority");
-  const takeParam = Number(searchParams.get("take") ?? "30");
-  const take = Number.isFinite(takeParam) ? Math.min(Math.max(takeParam, 1), 100) : 30;
+  const take = getTakeFromSearchParams(request, 40, 100);
 
   const where: {
     status?: WorkOrderStatus;
@@ -39,81 +41,99 @@ export async function GET(request: NextRequest) {
     where.priority = priorityParam as Priority;
   }
 
-  const workOrders = await prisma.workOrder.findMany({
-    where,
-    include: {
-      client: { select: { companyName: true } },
-      property: { select: { name: true } },
-    },
-    orderBy: [{ scheduledFor: "asc" }, { createdAt: "desc" }],
-    take,
-  });
+  try {
+    const [workOrders, total] = await Promise.all([
+      prisma.workOrder.findMany({
+        where,
+        include: {
+          client: { select: { companyName: true } },
+          property: { select: { name: true } },
+          assignedEmployee: {
+            select: {
+              fullName: true,
+              role: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: [{ scheduledFor: "asc" }, { updatedAt: "desc" }],
+        take,
+      }),
+      prisma.workOrder.count({ where }),
+    ]);
 
-  return NextResponse.json({ data: workOrders, count: workOrders.length });
+    return NextResponse.json({ data: workOrders, count: workOrders.length, total });
+  } catch (error) {
+    return serverError(error, "Failed to fetch work orders");
+  }
 }
 
 export async function POST(request: NextRequest) {
-  const user = await requireRoleFromRequest(request, UserRole.ADMIN);
+  const user = await requireRoleFromRequest(request, [UserRole.ADMIN, UserRole.MANAGER]);
 
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return unauthorized();
   }
 
-  let body: unknown;
+  const body = await readJsonBody(request);
 
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
+  if (!body) {
+    return badRequest("Invalid JSON payload");
   }
 
   const parsed = workOrderInputSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json(
-      {
-        error: "Validation failed",
-        details: parsed.error.flatten(),
-      },
-      { status: 400 },
-    );
+    return badRequest("Validation failed", parsed.error.flatten());
   }
 
-  const scheduledFor = parsed.data.scheduledFor ? new Date(parsed.data.scheduledFor) : null;
+  const scheduledFor = parseDateOrNull(parsed.data.scheduledFor);
+  const completedAt = parseDateOrNull(parsed.data.completedAt);
 
-  if (scheduledFor && Number.isNaN(scheduledFor.getTime())) {
-    return NextResponse.json({ error: "scheduledFor must be a valid ISO datetime" }, { status: 400 });
+  if (parsed.data.scheduledFor && !scheduledFor) {
+    return badRequest("scheduledFor must be a valid ISO datetime");
+  }
+
+  if (parsed.data.completedAt && !completedAt) {
+    return badRequest("completedAt must be a valid ISO datetime");
   }
 
   try {
     const workOrder = await prisma.workOrder.create({
       data: {
-        code: createWorkOrderCode(),
+        code: createNumber("WO"),
         title: parsed.data.title,
         description: parsed.data.description,
         priority: parsed.data.priority,
         status: parsed.data.status,
         assignee: parsed.data.assignee ?? null,
+        assignedEmployeeId: parsed.data.assignedEmployeeId ?? null,
         estimatedHours: parsed.data.estimatedHours ?? null,
+        actualHours: parsed.data.actualHours ?? null,
+        estimatedValueCents: parsed.data.estimatedValueCents ?? null,
+        locationLabel: parsed.data.locationLabel ?? null,
         scheduledFor,
+        completedAt,
         clientId: parsed.data.clientId ?? null,
         propertyId: parsed.data.propertyId ?? null,
       },
     });
 
-    return NextResponse.json(
-      {
-        message: "Work order created",
-        data: workOrder,
+    await prisma.activityLog.create({
+      data: {
+        actorName: user.fullName ?? user.username,
+        action: "Created work order",
+        entityType: "WorkOrder",
+        entityId: workOrder.id,
+        description: `Created ${workOrder.code} for ${workOrder.title}.`,
+        severity: "INFO",
+        userId: user.id,
+        clientId: parsed.data.clientId ?? null,
       },
-      { status: 201 },
-    );
+    });
+
+    return NextResponse.json({ message: "Work order created", data: workOrder }, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : "Failed to create work order",
-      },
-      { status: 500 },
-    );
+    return serverError(error, "Failed to create work order");
   }
 }

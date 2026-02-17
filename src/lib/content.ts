@@ -129,6 +129,11 @@ export const apiEndpointsPreview = [
   },
   {
     method: "GET",
+    path: "/api/dashboard/overview",
+    description: "Return CRM dashboard KPIs, pipeline metrics, and activity feed data.",
+  },
+  {
+    method: "GET",
     path: "/api/health",
     description: "Read platform health and top-level operational counters.",
   },
@@ -145,12 +150,37 @@ export const apiEndpointsPreview = [
   {
     method: "GET",
     path: "/api/work-orders?status=SCHEDULED",
-    description: "Fetch work orders for operations views (admin role required).",
+    description: "Fetch work orders for operations views (admin/manager role required).",
   },
   {
     method: "GET",
     path: "/api/invoices?status=SENT",
-    description: "Expose invoice pipeline for reporting (admin role required).",
+    description: "Expose invoice pipeline for reporting (admin/manager role required).",
+  },
+  {
+    method: "GET",
+    path: "/api/clients",
+    description: "List CRM clients with relationship counters (admin/manager role required).",
+  },
+  {
+    method: "GET",
+    path: "/api/properties",
+    description: "List managed properties with manager details and activity counters.",
+  },
+  {
+    method: "GET",
+    path: "/api/estimates",
+    description: "List estimate pipeline with conversion references (admin/manager role required).",
+  },
+  {
+    method: "GET",
+    path: "/api/employees",
+    description: "List employees and assignment capacity metrics (admin/manager role required).",
+  },
+  {
+    method: "GET",
+    path: "/api/schedule",
+    description: "Read dispatch schedule with assignee and work-order context.",
   },
 ];
 

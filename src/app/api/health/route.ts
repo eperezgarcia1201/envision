@@ -3,11 +3,24 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const [leadCount, workOrderCount, invoiceCount, clientCount] = await Promise.all([
+    const [
+      leadCount,
+      workOrderCount,
+      invoiceCount,
+      clientCount,
+      estimateCount,
+      employeeCount,
+      scheduleCount,
+      activityCount,
+    ] = await Promise.all([
       prisma.lead.count(),
       prisma.workOrder.count(),
       prisma.invoice.count(),
       prisma.client.count(),
+      prisma.estimate.count(),
+      prisma.employee.count(),
+      prisma.scheduleItem.count(),
+      prisma.activityLog.count(),
     ]);
 
     return NextResponse.json({
@@ -18,6 +31,10 @@ export async function GET() {
         workOrderCount,
         invoiceCount,
         clientCount,
+        estimateCount,
+        employeeCount,
+        scheduleCount,
+        activityCount,
       },
     });
   } catch (error) {
