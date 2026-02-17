@@ -50,12 +50,22 @@ export function AdminShell({ user, children }: AdminShellProps) {
         </div>
 
         <div className="crm-topbar-actions">
-          <button type="button" className="crm-create-btn">
-            Create New +
-          </button>
+          <details className="crm-create-menu">
+            <summary className="crm-create-btn">Create New +</summary>
+            <div className="crm-create-menu-list">
+              <Link href="/admin/leads?create=1">Lead</Link>
+              <Link href="/admin/work-orders?create=1">Work Order</Link>
+              <Link href="/admin/clients?create=1">Client</Link>
+              <Link href="/admin/properties?create=1">Property</Link>
+              <Link href="/admin/estimates?create=1">Estimate</Link>
+              <Link href="/admin/invoices?create=1">Invoice</Link>
+              <Link href="/admin/employees?create=1">Employee</Link>
+              <Link href="/admin/schedule?create=1">Schedule Item</Link>
+            </div>
+          </details>
           <label className="crm-search-wrap" htmlFor="crm-search-input">
             <span className="crm-search-icon">⌕</span>
-            <input id="crm-search-input" type="search" placeholder="Search records..." />
+            <input id="crm-search-input" type="search" placeholder="Use page-level search in each module..." />
           </label>
           <div className="crm-user-chip">
             <span className="crm-user-avatar">{(user.fullName ?? user.username).slice(0, 1).toUpperCase()}</span>

@@ -1,97 +1,143 @@
 import type { Metadata } from "next";
-import { enumLabel, getSettingsData } from "@/lib/crm";
-import { formatDate } from "@/lib/format";
+import { UserRole } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { enumLabel } from "@/lib/crm";
+import { requireRole } from "@/lib/auth";
+import { ResourceCrud } from "@/components/crm/resource-crud";
 
 export const metadata: Metadata = {
   title: "Settings | CRM",
-  description: "Platform modules, user accounts, and operational configuration summary.",
+  description: "Admin-level account and service package configuration.",
 };
 
 export default async function AdminSettingsPage() {
-  const settings = await getSettingsData();
+  await requireRole(UserRole.ADMIN, "/admin/settings");
+
+  const [userAccounts, clients, servicePackages] = await Promise.all([
+    prisma.user.findMany({
+      select: {
+        id: true,
+        createdAt: true,
+        updatedAt: true,
+        username: true,
+        role: true,
+        fullName: true,
+        clientId: true,
+        client: {
+          select: {
+            companyName: true,
+          },
+        },
+      },
+      orderBy: [{ role: "asc" }, { username: "asc" }],
+      take: 100,
+    }),
+    prisma.client.findMany({
+      orderBy: [{ companyName: "asc" }],
+      select: { id: true, companyName: true },
+    }),
+    prisma.servicePackage.findMany({
+      orderBy: [{ featured: "desc" }, { name: "asc" }],
+      take: 100,
+    }),
+  ]);
+
+  const roleOptions = Object.values(UserRole).map((role) => ({
+    value: role,
+    label: enumLabel(role),
+  }));
 
   return (
     <div className="crm-stack">
-      <section className="crm-panel">
-        <div className="crm-section-head compact">
-          <h1>Settings</h1>
-          <p>Platform inventory and access baseline.</p>
-        </div>
-        <div className="crm-kpi-grid" style={{ marginTop: "0.8rem" }}>
-          <article className="crm-kpi-card">
-            <p>Clients</p>
-            <strong>{settings.counts.clients}</strong>
-          </article>
-          <article className="crm-kpi-card">
-            <p>Employees</p>
-            <strong>{settings.counts.employees}</strong>
-          </article>
-          <article className="crm-kpi-card">
-            <p>Work Orders</p>
-            <strong>{settings.counts.workOrders}</strong>
-          </article>
-          <article className="crm-kpi-card">
-            <p>Service Packages</p>
-            <strong>{settings.packageCount}</strong>
-          </article>
-        </div>
-      </section>
+      <ResourceCrud
+        title="User Accounts"
+        description="Manage platform users and role access."
+        endpoint="/api/users"
+        singularName="User"
+        initialItems={userAccounts}
+        searchKeys={["username", "fullName", "role", "client.companyName"]}
+        filters={[{ name: "role", label: "Role", options: roleOptions }]}
+        defaultValues={{ role: "CLIENT" }}
+        columns={[
+          { key: "username", label: "Username" },
+          { key: "fullName", label: "Full Name", empty: "-" },
+          { key: "role", label: "Role", format: "pill" },
+          { key: "client.companyName", label: "Client", empty: "-" },
+          { key: "createdAt", label: "Created", format: "date" },
+        ]}
+        fields={[
+          { name: "username", label: "Username", type: "text", required: true },
+          {
+            name: "password",
+            label: "Password",
+            type: "password",
+            requiredOnCreate: true,
+            placeholder: "Required for create. Leave blank to keep unchanged on edit.",
+          },
+          { name: "fullName", label: "Full Name", type: "text" },
+          { name: "role", label: "Role", type: "select", required: true, options: roleOptions },
+          {
+            name: "clientId",
+            label: "Linked Client",
+            type: "select",
+            options: clients.map((client) => ({ value: client.id, label: client.companyName })),
+          },
+        ]}
+      />
 
-      <section className="crm-main-columns" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-        <article className="crm-panel">
-          <div className="crm-section-head compact">
-            <h2>User Accounts</h2>
-            <p>Role assignments</p>
-          </div>
-          <div className="table-wrap" style={{ marginTop: "0.5rem" }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Username</th>
-                  <th>Name</th>
-                  <th>Role</th>
-                  <th>Created</th>
-                </tr>
-              </thead>
-              <tbody>
-                {settings.userAccounts.map((user) => (
-                  <tr key={user.id}>
-                    <td>{user.username}</td>
-                    <td>{user.fullName ?? "-"}</td>
-                    <td>
-                      <span className="pill">{enumLabel(user.role)}</span>
-                    </td>
-                    <td>{formatDate(user.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <article className="crm-panel">
-          <div className="crm-section-head compact">
-            <h2>Service Packages</h2>
-            <p>Published commercial offerings</p>
-          </div>
-          <div className="crm-activity-list">
-            {settings.services.map((service) => (
-              <article key={service.id} className="crm-activity-item">
-                <div>
-                  <p>
-                    <strong>{service.name}</strong>
-                  </p>
-                  <small>{service.summary}</small>
-                </div>
-                <div className="crm-activity-meta">
-                  <span className="pill">{service.startingPrice}</span>
-                  <small>{service.coverageArea}</small>
-                </div>
-              </article>
-            ))}
-          </div>
-        </article>
-      </section>
+      <ResourceCrud
+        title="Service Packages"
+        description="Manage published service offerings and SLA settings."
+        endpoint="/api/service-packages"
+        singularName="Service Package"
+        initialItems={servicePackages}
+        searchKeys={["name", "slug", "coverageArea", "startingPrice"]}
+        filters={[
+          {
+            name: "featured",
+            label: "Featured",
+            options: [
+              { value: "true", label: "Yes" },
+              { value: "false", label: "No" },
+            ],
+          },
+        ]}
+        defaultValues={{ featured: "false" }}
+        columns={[
+          { key: "slug", label: "Slug" },
+          { key: "name", label: "Name" },
+          { key: "responseSlaHours", label: "SLA Hours" },
+          { key: "coverageArea", label: "Coverage" },
+          { key: "startingPrice", label: "Price" },
+          { key: "featured", label: "Featured", format: "boolean" },
+        ]}
+        fields={[
+          { name: "slug", label: "Slug", type: "text", required: true },
+          { name: "name", label: "Name", type: "text", required: true },
+          { name: "summary", label: "Summary", type: "textarea", required: true },
+          {
+            name: "responseSlaHours",
+            label: "Response SLA Hours",
+            type: "number",
+            valueType: "number",
+            required: true,
+            step: "1",
+          },
+          { name: "coverageArea", label: "Coverage Area", type: "text", required: true },
+          { name: "startingPrice", label: "Starting Price", type: "text", required: true },
+          {
+            name: "featured",
+            label: "Featured",
+            type: "select",
+            valueType: "boolean",
+            required: true,
+            options: [
+              { value: "false", label: "No" },
+              { value: "true", label: "Yes" },
+            ],
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -182,6 +182,16 @@ export const apiEndpointsPreview = [
     path: "/api/schedule",
     description: "Read dispatch schedule with assignee and work-order context.",
   },
+  {
+    method: "GET",
+    path: "/api/users",
+    description: "Admin-only endpoint to manage platform user accounts and roles.",
+  },
+  {
+    method: "GET",
+    path: "/api/service-packages",
+    description: "Read and manage service package catalog entries.",
+  },
 ];
 
 export const roadmapMilestones = [

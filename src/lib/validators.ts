@@ -34,6 +34,7 @@ const scheduleStatusSchema = z.enum([
   "COMPLETED",
   "CANCELED",
 ]);
+const userRoleSchema = z.enum(["ADMIN", "MANAGER", "CLIENT"]);
 
 export const loginInputSchema = z.object({
   username: z.string().trim().min(3).max(64),
@@ -158,6 +159,39 @@ export const scheduleItemInputSchema = z.object({
 });
 
 export const scheduleItemUpdateSchema = scheduleItemInputSchema.partial();
+
+export const userAccountInputSchema = z.object({
+  username: z.string().trim().min(3).max(64),
+  password: z.string().min(6).max(256),
+  role: userRoleSchema.default("CLIENT"),
+  fullName: z.string().trim().max(120).optional().nullable(),
+  clientId: z.string().trim().min(3).max(40).optional().nullable(),
+});
+
+export const userAccountUpdateSchema = z.object({
+  username: z.string().trim().min(3).max(64).optional(),
+  password: z.string().min(6).max(256).optional(),
+  role: userRoleSchema.optional(),
+  fullName: z.string().trim().max(120).optional().nullable(),
+  clientId: z.string().trim().min(3).max(40).optional().nullable(),
+});
+
+export const servicePackageInputSchema = z.object({
+  slug: z
+    .string()
+    .trim()
+    .min(2)
+    .max(80)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  name: z.string().trim().min(2).max(160),
+  summary: z.string().trim().min(8).max(800),
+  responseSlaHours: z.coerce.number().int().min(1).max(168),
+  coverageArea: z.string().trim().min(2).max(160),
+  startingPrice: z.string().trim().min(2).max(80),
+  featured: z.coerce.boolean().default(false),
+});
+
+export const servicePackageUpdateSchema = servicePackageInputSchema.partial();
 
 export const idParamSchema = z.object({
   id: z.string().trim().min(3).max(64),

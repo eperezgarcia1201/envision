@@ -1,66 +1,107 @@
 import type { Metadata } from "next";
+import { EstimateStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { enumLabel } from "@/lib/crm";
-import { formatCurrencyFromCents, formatDate } from "@/lib/format";
+import { ResourceCrud } from "@/components/crm/resource-crud";
 
 export const metadata: Metadata = {
   title: "Estimates | CRM",
-  description: "Estimate pipeline and proposal conversion tracking.",
+  description: "Proposal lifecycle from draft to conversion.",
 };
 
 export default async function AdminEstimatesPage() {
-  const estimates = await prisma.estimate.findMany({
-    include: {
-      client: { select: { companyName: true } },
-      property: { select: { name: true } },
-      lead: { select: { name: true } },
-      convertedWorkOrder: { select: { code: true } },
-    },
-    orderBy: [{ updatedAt: "desc" }],
-    take: 80,
-  });
+  const [estimates, clients, properties, leads, workOrders] = await Promise.all([
+    prisma.estimate.findMany({
+      include: {
+        client: { select: { companyName: true } },
+        property: { select: { name: true } },
+        lead: { select: { name: true, company: true } },
+        convertedWorkOrder: { select: { code: true } },
+      },
+      orderBy: [{ updatedAt: "desc" }],
+      take: 100,
+    }),
+    prisma.client.findMany({
+      orderBy: [{ companyName: "asc" }],
+      select: { id: true, companyName: true },
+    }),
+    prisma.property.findMany({
+      orderBy: [{ name: "asc" }],
+      select: { id: true, name: true },
+    }),
+    prisma.lead.findMany({
+      orderBy: [{ createdAt: "desc" }],
+      select: { id: true, name: true, company: true },
+      take: 100,
+    }),
+    prisma.workOrder.findMany({
+      orderBy: [{ updatedAt: "desc" }],
+      select: { id: true, code: true },
+      take: 100,
+    }),
+  ]);
+
+  const statusOptions = Object.values(EstimateStatus).map((status) => ({
+    value: status,
+    label: enumLabel(status),
+  }));
 
   return (
-    <div className="crm-stack">
-      <section className="crm-panel">
-        <div className="crm-section-head compact">
-          <h1>Estimates</h1>
-          <p>Proposal status, value, and conversion visibility.</p>
-        </div>
-      </section>
-
-      <section className="crm-panel">
-        <div className="table-wrap" style={{ marginTop: 0 }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Estimate</th>
-                <th>Title</th>
-                <th>Client</th>
-                <th>Status</th>
-                <th>Amount</th>
-                <th>Valid Until</th>
-                <th>Converted WO</th>
-              </tr>
-            </thead>
-            <tbody>
-              {estimates.map((estimate) => (
-                <tr key={estimate.id}>
-                  <td>{estimate.estimateNumber}</td>
-                  <td>{estimate.title}</td>
-                  <td>{estimate.client?.companyName ?? estimate.lead?.name ?? "Unassigned"}</td>
-                  <td>
-                    <span className="pill">{enumLabel(estimate.status)}</span>
-                  </td>
-                  <td>{formatCurrencyFromCents(estimate.amountCents)}</td>
-                  <td>{formatDate(estimate.validUntil)}</td>
-                  <td>{estimate.convertedWorkOrder?.code ?? "-"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+    <ResourceCrud
+      title="Estimates"
+      description="Create and update proposals with full conversion context."
+      endpoint="/api/estimates"
+      singularName="Estimate"
+      initialItems={estimates}
+      searchKeys={["estimateNumber", "title", "description", "client.companyName", "lead.name", "preparedBy"]}
+      filters={[{ name: "status", label: "Status", options: statusOptions }]}
+      defaultValues={{ status: "DRAFT" }}
+      columns={[
+        { key: "estimateNumber", label: "Estimate #" },
+        { key: "title", label: "Title" },
+        { key: "status", label: "Status", format: "pill" },
+        { key: "amountCents", label: "Amount", format: "currency" },
+        { key: "client.companyName", label: "Client", empty: "Unassigned" },
+        { key: "validUntil", label: "Valid Until", format: "date", empty: "-" },
+        { key: "convertedWorkOrder.code", label: "WO", empty: "-" },
+      ]}
+      fields={[
+        { name: "estimateNumber", label: "Estimate Number", type: "text" },
+        { name: "title", label: "Title", type: "text", required: true },
+        { name: "description", label: "Description", type: "textarea", required: true },
+        { name: "amountCents", label: "Amount (Cents)", type: "number", required: true, valueType: "number" },
+        { name: "status", label: "Status", type: "select", required: true, options: statusOptions },
+        { name: "validUntil", label: "Valid Until", type: "date" },
+        { name: "preparedBy", label: "Prepared By", type: "text" },
+        { name: "notes", label: "Notes", type: "textarea" },
+        {
+          name: "clientId",
+          label: "Client",
+          type: "select",
+          options: clients.map((client) => ({ value: client.id, label: client.companyName })),
+        },
+        {
+          name: "propertyId",
+          label: "Property",
+          type: "select",
+          options: properties.map((property) => ({ value: property.id, label: property.name })),
+        },
+        {
+          name: "leadId",
+          label: "Lead",
+          type: "select",
+          options: leads.map((lead) => ({
+            value: lead.id,
+            label: `${lead.name}${lead.company ? ` (${lead.company})` : ""}`,
+          })),
+        },
+        {
+          name: "convertedWorkOrderId",
+          label: "Converted Work Order",
+          type: "select",
+          options: workOrders.map((workOrder) => ({ value: workOrder.id, label: workOrder.code })),
+        },
+      ]}
+    />
   );
 }

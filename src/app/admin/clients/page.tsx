@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { ResourceCrud } from "@/components/crm/resource-crud";
 
 export const metadata: Metadata = {
   title: "Clients | CRM",
-  description: "Client accounts and portfolio coverage.",
+  description: "Client accounts and portfolio operations.",
 };
 
 export default async function AdminClientsPage() {
@@ -19,52 +20,40 @@ export default async function AdminClientsPage() {
       },
     },
     orderBy: [{ companyName: "asc" }],
-    take: 80,
+    take: 100,
   });
 
-  return (
-    <div className="crm-stack">
-      <section className="crm-panel">
-        <div className="crm-section-head compact">
-          <h1>Clients</h1>
-          <p>Account tiers, contacts, and service footprint.</p>
-        </div>
-      </section>
+  const tierOptions = Array.from(new Set(clients.map((client) => client.tier))).map((tier) => ({
+    value: tier,
+    label: tier,
+  }));
 
-      <section className="crm-panel">
-        <div className="table-wrap" style={{ marginTop: 0 }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>Contact</th>
-                <th>Tier</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Properties</th>
-                <th>Work Orders</th>
-                <th>Invoices</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clients.map((client) => (
-                <tr key={client.id}>
-                  <td>{client.companyName}</td>
-                  <td>{client.contactName}</td>
-                  <td>
-                    <span className="pill">{client.tier}</span>
-                  </td>
-                  <td>{client.email}</td>
-                  <td>{client.phone}</td>
-                  <td>{client._count.properties}</td>
-                  <td>{client._count.workOrders}</td>
-                  <td>{client._count.invoices}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+  return (
+    <ResourceCrud
+      title="Clients"
+      description="Manage customer accounts, contacts, and service tiers."
+      endpoint="/api/clients"
+      singularName="Client"
+      initialItems={clients}
+      searchKeys={["companyName", "contactName", "email", "phone", "tier"]}
+      filters={[{ name: "tier", label: "Tier", options: tierOptions }]}
+      columns={[
+        { key: "companyName", label: "Company" },
+        { key: "contactName", label: "Contact" },
+        { key: "tier", label: "Tier", format: "pill" },
+        { key: "email", label: "Email" },
+        { key: "phone", label: "Phone" },
+        { key: "_count.properties", label: "Properties" },
+        { key: "_count.workOrders", label: "Work Orders" },
+        { key: "_count.invoices", label: "Invoices" },
+      ]}
+      fields={[
+        { name: "companyName", label: "Company Name", type: "text", required: true },
+        { name: "contactName", label: "Contact Name", type: "text", required: true },
+        { name: "email", label: "Email", type: "email", required: true },
+        { name: "phone", label: "Phone", type: "tel", required: true },
+        { name: "tier", label: "Tier", type: "text", required: true },
+      ]}
+    />
   );
 }

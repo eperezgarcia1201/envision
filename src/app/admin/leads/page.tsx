@@ -2,79 +2,53 @@ import type { Metadata } from "next";
 import { LeadStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { enumLabel } from "@/lib/crm";
-import { formatDate } from "@/lib/format";
+import { ResourceCrud } from "@/components/crm/resource-crud";
 
 export const metadata: Metadata = {
   title: "Leads | CRM",
-  description: "Lead intake pipeline and qualification status.",
+  description: "Lead intake pipeline and lifecycle management.",
 };
 
 export default async function AdminLeadsPage() {
-  const [leads, grouped] = await Promise.all([
-    prisma.lead.findMany({
-      orderBy: [{ createdAt: "desc" }],
-      take: 80,
-    }),
-    prisma.lead.groupBy({
-      by: ["status"],
-      _count: {
-        id: true,
-      },
-    }),
-  ]);
+  const leads = await prisma.lead.findMany({
+    orderBy: [{ createdAt: "desc" }],
+    take: 100,
+  });
 
-  const counts = Object.values(LeadStatus).map((status) => ({
-    status,
-    count: grouped.find((item) => item.status === status)?._count.id ?? 0,
+  const statusOptions = Object.values(LeadStatus).map((status) => ({
+    value: status,
+    label: enumLabel(status),
   }));
 
   return (
-    <div className="crm-stack">
-      <section className="crm-panel">
-        <div className="crm-section-head compact">
-          <h1>Leads</h1>
-          <p>Inbound opportunities and lifecycle progression.</p>
-        </div>
-        <div className="crm-pipeline-row" style={{ marginTop: "0.8rem" }}>
-          {counts.map((item) => (
-            <div key={item.status} className="crm-pipeline-pill">
-              <span>{enumLabel(item.status)}</span>
-              <strong>{item.count}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="crm-panel">
-        <div className="table-wrap" style={{ marginTop: 0 }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Company</th>
-                <th>Service Needed</th>
-                <th>Status</th>
-                <th>Source</th>
-                <th>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leads.map((lead) => (
-                <tr key={lead.id}>
-                  <td>{lead.name}</td>
-                  <td>{lead.company ?? "N/A"}</td>
-                  <td>{lead.serviceNeeded ?? "General Inquiry"}</td>
-                  <td>
-                    <span className="pill">{enumLabel(lead.status)}</span>
-                  </td>
-                  <td>{lead.source}</td>
-                  <td>{formatDate(lead.createdAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+    <ResourceCrud
+      title="Leads"
+      description="Capture, qualify, and update every inbound opportunity."
+      endpoint="/api/leads"
+      singularName="Lead"
+      initialItems={leads}
+      searchKeys={["name", "email", "company", "serviceNeeded", "message", "source"]}
+      filters={[{ name: "status", label: "Status", options: statusOptions }]}
+      defaultValues={{ status: "NEW", source: "website" }}
+      columns={[
+        { key: "name", label: "Name" },
+        { key: "email", label: "Email" },
+        { key: "company", label: "Company", empty: "N/A" },
+        { key: "serviceNeeded", label: "Service", empty: "General" },
+        { key: "status", label: "Status", format: "pill" },
+        { key: "source", label: "Source" },
+        { key: "createdAt", label: "Created", format: "date" },
+      ]}
+      fields={[
+        { name: "name", label: "Name", type: "text", required: true },
+        { name: "email", label: "Email", type: "email", required: true },
+        { name: "phone", label: "Phone", type: "tel" },
+        { name: "company", label: "Company", type: "text" },
+        { name: "serviceNeeded", label: "Service Needed", type: "text" },
+        { name: "source", label: "Source", type: "text", required: true },
+        { name: "status", label: "Status", type: "select", required: true, options: statusOptions },
+        { name: "message", label: "Message", type: "textarea", required: true },
+      ]}
+    />
   );
 }

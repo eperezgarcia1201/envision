@@ -1,74 +1,77 @@
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { ResourceCrud } from "@/components/crm/resource-crud";
 
 export const metadata: Metadata = {
   title: "Properties | CRM",
-  description: "Managed properties, managers, and operational coverage.",
+  description: "Managed properties and onsite manager records.",
 };
 
 export default async function AdminPropertiesPage() {
-  const properties = await prisma.property.findMany({
-    include: {
-      client: { select: { companyName: true } },
-      _count: {
-        select: {
-          workOrders: true,
-          estimates: true,
-          scheduleItems: true,
+  const [properties, clients] = await Promise.all([
+    prisma.property.findMany({
+      include: {
+        client: { select: { companyName: true } },
+        _count: {
+          select: {
+            workOrders: true,
+            estimates: true,
+            scheduleItems: true,
+          },
         },
       },
-    },
-    orderBy: [{ city: "asc" }, { name: "asc" }],
-    take: 80,
-  });
+      orderBy: [{ updatedAt: "desc" }],
+      take: 100,
+    }),
+    prisma.client.findMany({
+      orderBy: [{ companyName: "asc" }],
+      select: { id: true, companyName: true },
+    }),
+  ]);
 
   return (
-    <div className="crm-stack">
-      <section className="crm-panel">
-        <div className="crm-section-head compact">
-          <h1>Properties</h1>
-          <p>Sites, managers, and linked operations activity.</p>
-        </div>
-      </section>
-
-      <section className="crm-panel">
-        <div className="table-wrap" style={{ marginTop: 0 }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Property</th>
-                <th>Client</th>
-                <th>Address</th>
-                <th>Manager</th>
-                <th>Contact</th>
-                <th>Work Orders</th>
-                <th>Estimates</th>
-                <th>Schedule</th>
-              </tr>
-            </thead>
-            <tbody>
-              {properties.map((property) => (
-                <tr key={property.id}>
-                  <td>{property.name}</td>
-                  <td>{property.client?.companyName ?? "Unassigned"}</td>
-                  <td>
-                    {property.addressLine1}, {property.city}, {property.state} {property.zipCode}
-                  </td>
-                  <td>{property.managerName}</td>
-                  <td>
-                    {property.managerEmail}
-                    <br />
-                    {property.managerPhone}
-                  </td>
-                  <td>{property._count.workOrders}</td>
-                  <td>{property._count.estimates}</td>
-                  <td>{property._count.scheduleItems}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+    <ResourceCrud
+      title="Properties"
+      description="Track sites, addresses, and manager contacts across all clients."
+      endpoint="/api/properties"
+      singularName="Property"
+      initialItems={properties}
+      searchKeys={[
+        "name",
+        "addressLine1",
+        "city",
+        "state",
+        "zipCode",
+        "managerName",
+        "managerEmail",
+        "client.companyName",
+      ]}
+      columns={[
+        { key: "name", label: "Property" },
+        { key: "client.companyName", label: "Client", empty: "Unassigned" },
+        { key: "city", label: "City" },
+        { key: "state", label: "State" },
+        { key: "managerName", label: "Manager" },
+        { key: "managerEmail", label: "Manager Email" },
+        { key: "_count.workOrders", label: "Work Orders" },
+        { key: "_count.scheduleItems", label: "Schedule" },
+      ]}
+      fields={[
+        { name: "name", label: "Property Name", type: "text", required: true },
+        { name: "addressLine1", label: "Address", type: "text", required: true },
+        { name: "city", label: "City", type: "text", required: true },
+        { name: "state", label: "State", type: "text", required: true },
+        { name: "zipCode", label: "ZIP Code", type: "text", required: true },
+        { name: "managerName", label: "Manager Name", type: "text", required: true },
+        { name: "managerEmail", label: "Manager Email", type: "email", required: true },
+        { name: "managerPhone", label: "Manager Phone", type: "tel", required: true },
+        {
+          name: "clientId",
+          label: "Client",
+          type: "select",
+          options: clients.map((client) => ({ value: client.id, label: client.companyName })),
+        },
+      ]}
+    />
   );
 }

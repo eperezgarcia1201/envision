@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { EmployeeRole, EmployeeStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { enumLabel } from "@/lib/crm";
+import { ResourceCrud } from "@/components/crm/resource-crud";
 
 export const metadata: Metadata = {
   title: "Employees | CRM",
-  description: "Technician and operations team capacity overview.",
+  description: "Team members, assignments, and workforce status.",
 };
 
 export default async function AdminEmployeesPage() {
@@ -18,54 +20,51 @@ export default async function AdminEmployeesPage() {
       },
     },
     orderBy: [{ fullName: "asc" }],
-    take: 80,
+    take: 100,
   });
 
-  return (
-    <div className="crm-stack">
-      <section className="crm-panel">
-        <div className="crm-section-head compact">
-          <h1>Employees</h1>
-          <p>Field and operations staffing across territories.</p>
-        </div>
-      </section>
+  const roleOptions = Object.values(EmployeeRole).map((role) => ({
+    value: role,
+    label: enumLabel(role),
+  }));
 
-      <section className="crm-panel">
-        <div className="table-wrap" style={{ marginTop: 0 }}>
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Territory</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Work Orders</th>
-                <th>Schedule Items</th>
-              </tr>
-            </thead>
-            <tbody>
-              {employees.map((employee) => (
-                <tr key={employee.id}>
-                  <td>{employee.fullName}</td>
-                  <td>
-                    <span className="pill">{enumLabel(employee.role)}</span>
-                  </td>
-                  <td>
-                    <span className="pill">{enumLabel(employee.status)}</span>
-                  </td>
-                  <td>{employee.territory ?? "-"}</td>
-                  <td>{employee.email}</td>
-                  <td>{employee.phone}</td>
-                  <td>{employee._count.workOrders}</td>
-                  <td>{employee._count.scheduleItems}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </div>
+  const statusOptions = Object.values(EmployeeStatus).map((status) => ({
+    value: status,
+    label: enumLabel(status),
+  }));
+
+  return (
+    <ResourceCrud
+      title="Employees"
+      description="Maintain workforce records and assignment capacity."
+      endpoint="/api/employees"
+      singularName="Employee"
+      initialItems={employees}
+      searchKeys={["fullName", "email", "phone", "territory", "role"]}
+      filters={[
+        { name: "role", label: "Role", options: roleOptions },
+        { name: "status", label: "Status", options: statusOptions },
+      ]}
+      defaultValues={{ role: "FIELD_TECH", status: "ACTIVE" }}
+      columns={[
+        { key: "fullName", label: "Name" },
+        { key: "role", label: "Role", format: "pill" },
+        { key: "status", label: "Status", format: "pill" },
+        { key: "territory", label: "Territory", empty: "-" },
+        { key: "email", label: "Email" },
+        { key: "phone", label: "Phone" },
+        { key: "_count.workOrders", label: "Work Orders" },
+        { key: "_count.scheduleItems", label: "Schedule" },
+      ]}
+      fields={[
+        { name: "fullName", label: "Full Name", type: "text", required: true },
+        { name: "email", label: "Email", type: "email", required: true },
+        { name: "phone", label: "Phone", type: "tel", required: true },
+        { name: "role", label: "Role", type: "select", required: true, options: roleOptions },
+        { name: "status", label: "Status", type: "select", required: true, options: statusOptions },
+        { name: "territory", label: "Territory", type: "text" },
+        { name: "avatarUrl", label: "Avatar URL", type: "text" },
+      ]}
+    />
   );
 }
